@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Percolation at the threshold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEF2F6; --panel:#FFFFFF; --ink:#15243A; --muted:#566779; --rule:#CBD5E0; --grid:#E3E9F0;
+  --accent:#1F4FD1; --crit:#B4235A;
+  --l16:#E69F00; --l32:#56B4E9; --l64:#009E73; --l128:#CC79A7; --l256:#0B5FA5;
+  --serif:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --sans:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1924; --panel:#142232; --ink:#E2E9F1; --muted:#93A4B8; --rule:#2B3D52; --grid:#1B2B3D;
+    --accent:#7A9DFF; --crit:#FF6F9C;
+    --l16:#F0B43C; --l32:#6CC3F2; --l64:#2FC596; --l128:#E08FC1; --l256:#8FB8FF;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1924; --panel:#142232; --ink:#E2E9F1; --muted:#93A4B8; --rule:#2B3D52; --grid:#1B2B3D;
+  --accent:#7A9DFF; --crit:#FF6F9C;
+  --l16:#F0B43C; --l32:#6CC3F2; --l64:#2FC596; --l128:#E08FC1; --l256:#8FB8FF;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5;
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:24px 24px;
+  font-variant-numeric:tabular-nums;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:28px 20px 60px}
+h1,h2,h3{font-family:var(--serif); font-weight:600; line-height:1.15; margin:0}
+h1{font-size:clamp(30px,4.6vw,48px); letter-spacing:-0.01em}
+h2{font-size:clamp(22px,2.8vw,30px); margin-bottom:8px}
+p{margin:0 0 10px}
+.lede{font-family:var(--serif); font-size:18px; line-height:1.55; max-width:68ch; margin-top:12px; color:var(--ink)}
+.prose{max-width:72ch; font-family:var(--serif); font-size:16.5px; line-height:1.6}
+section{margin-top:44px}
+sub{font-size:.72em}
+.hero{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(290px,1fr); gap:28px; margin-top:26px; align-items:start}
+@media (max-width:860px){.hero{grid-template-columns:1fr}}
+.plate{background:var(--panel); border:2px solid var(--ink); padding:10px; border-radius:3px}
+#lat{width:100%; aspect-ratio:1/1; display:block; image-rendering:pixelated}
+.plate-note{font-size:13px; color:var(--muted); margin-top:8px}
+.controls{display:flex; flex-direction:column; gap:14px}
+.pbig{font-family:var(--serif); font-size:clamp(40px,6vw,64px); line-height:1; font-weight:600; letter-spacing:-0.02em}
+.pbig span{font-style:italic; font-weight:400}
+.slider-wrap{position:relative; padding-bottom:18px}
+input[type=range]{width:100%; accent-color:var(--accent); margin:0}
+.pcmark{position:absolute; top:22px; transform:translateX(-50%); font-size:12px; color:var(--crit); white-space:nowrap}
+.pcmark::before{content:""; position:absolute; left:50%; top:-6px; width:1px; height:6px; background:var(--crit)}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+button,select{font:inherit; font-size:14px; color:var(--ink); background:var(--panel); border:1px solid var(--rule); border-radius:5px; padding:6px 11px; cursor:pointer}
+button:hover{border-color:var(--ink)}
+button.primary{background:var(--ink); color:var(--panel); border-color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+fieldset{border:0; padding:0; margin:0}
+legend{font-size:13px; color:var(--muted); margin-bottom:4px}
+.seg{display:inline-flex; border:1px solid var(--rule); border-radius:5px; overflow:hidden; background:var(--panel)}
+.seg label{padding:6px 11px; font-size:14px; cursor:pointer}
+.seg input{position:absolute; opacity:0; pointer-events:none}
+.seg input:checked + span{font-weight:600; color:var(--accent)}
+.seg input:focus-visible + span{outline:2px solid var(--accent); outline-offset:2px}
+.field label.lab{font-size:13px; color:var(--muted); display:block; margin-bottom:4px}
+dl.readouts{display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; padding:12px 14px; background:var(--panel); border:1px solid var(--rule); border-radius:5px}
+dl.readouts dt{color:var(--muted); font-size:14px}
+dl.readouts dd{margin:0; font-weight:600; text-align:right}
+.status{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; margin:12px 0 4px; font-size:13.5px}
+.chip{display:inline-flex; align-items:center; gap:6px}
+.sw{width:18px; height:3px; border-radius:2px; display:inline-block}
+.bar{height:4px; background:var(--grid); border-radius:2px; overflow:hidden; flex:1 1 160px; max-width:260px}
+.bar i{display:block; height:100%; width:0; background:var(--accent)}
+.figs{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:14px}
+figure{margin:0; background:var(--panel); border:1px solid var(--rule); border-radius:5px; padding:12px 12px 10px}
+figcaption{font-size:13.5px; color:var(--muted); margin-bottom:6px}
+figcaption b{color:var(--ink); font-weight:600; font-size:14.5px; display:block}
+figure canvas{width:100%; height:240px; display:block}
+figure.sq canvas{height:auto; aspect-ratio:1/1}
+figure.wide{grid-column:1 / -1}
+.stages{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px}
+@media (max-width:700px){.stages{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
+.stages canvas{width:100%; height:auto; aspect-ratio:1/1; display:block; border:1px solid var(--rule)}
+.stlab{display:block; font-size:12.5px; color:var(--muted); margin-top:4px}
+.fit{font-size:13.5px; margin:6px 0 0; min-height:1.4em}
+.clickable canvas{cursor:crosshair}
+.tbl{overflow-x:auto; margin-top:14px; background:var(--panel); border:1px solid var(--rule); border-radius:5px}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:640px}
+th,td{padding:8px 12px; text-align:left; border-bottom:1px solid var(--grid); vertical-align:top}
+th{font-weight:600; color:var(--muted); font-size:13px}
+td.num{text-align:right; white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.good{color:var(--l64)} .warn{color:var(--crit)}
+.two{display:grid; grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr); gap:20px; margin-top:14px; align-items:start}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+.two figure canvas{height:340px}
+.sl{display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:center; margin-bottom:12px}
+.sl label{font-size:14px}
+.sl output{font-weight:600}
+.sl input{grid-column:1 / -1}
+.note{font-size:13px; color:var(--muted); max-width:80ch}
+.keyref{border-left:4px solid var(--accent); background:var(--panel); padding:12px 16px; border-radius:0 5px 5px 0; margin:12px 0 16px; max-width:80ch}
+ol.refs{max-width:80ch; padding-left:1.4em; font-size:14.5px; line-height:1.55}
+ol.refs li{margin-bottom:8px}
+footer{margin-top:48px; font-size:13px; color:var(--muted); max-width:80ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Percolation on the square lattice</h1>
+  <p class="lede">Fill each site of an L × L grid independently with probability p. Around p<sub>c</sub> ≈ 0.5927 a single cluster first stretches from the top edge to the bottom, and every quantity you can measure turns into a power law with universal exponents. Drag p to watch the transition, then let the simulation measure the exponents and test the relations between them.</p>
+  <p class="note" style="margin-top:6px">Based on lecture notes by Sang Hoon Lee, following K. Christensen and N. R. Moloney, <i>Complexity and Criticality</i> (2005). <a href="#references" style="color:var(--accent)">References</a></p>
+</header>
+
+<div class="hero">
+  <div>
+    <div class="plate"><canvas id="lat" aria-label="Percolation lattice"></canvas></div>
+    <p class="plate-note" id="latNote">Every site keeps the same random number, so raising p only ever adds sites and you see clusters merge.</p>
+  </div>
+  <div class="controls">
+    <div class="pbig"><span>p</span> = <output id="pOut">0.5927</output></div>
+    <div class="slider-wrap">
+      <label for="p" class="sr" style="position:absolute;left:-9999px">Occupation probability p</label>
+      <input type="range" id="p" min="0" max="1" step="0.0005" value="0.5927">
+      <div class="pcmark" style="left:59.27%">p<sub>c</sub></div>
+    </div>
+    <div class="row">
+      <button id="dn" aria-label="Decrease p by 0.005">− 0.005</button>
+      <button id="up" aria-label="Increase p by 0.005">+ 0.005</button>
+      <button id="toPc" class="primary">Jump to p<sub>c</sub></button>
+      <button id="seed">New random lattice</button>
+    </div>
+    <div class="row" style="gap:18px">
+      <div class="field"><label class="lab" for="Lsel">Lattice size</label>
+        <select id="Lsel"><option value="64">64 × 64</option><option value="128" selected>128 × 128</option><option value="256">256 × 256</option><option value="512">512 × 512</option></select>
+      </div>
+      <fieldset>
+        <legend>Coloring</legend>
+        <div class="seg">
+          <label><input type="radio" name="vm" value="all" checked><span>Every cluster</span></label>
+          <label><input type="radio" name="vm" value="big"><span>Largest only</span></label>
+        </div>
+      </fieldset>
+    </div>
+    <dl class="readouts">
+      <dt>Filled sites</dt><dd id="rOcc">–</dd>
+      <dt>Clusters per site</dt><dd id="rNc">–</dd>
+      <dt>Spans top to bottom</dt><dd id="rSpan">–</dd>
+      <dt>P, share of sites in the largest cluster</dt><dd id="rP">–</dd>
+      <dt>χ, mean size of the other clusters</dt><dd id="rChi">–</dd>
+      <dt>ξ, correlation length (sites)</dt><dd id="rXi">–</dd>
+      <dt>(p − p<sub>c</sub>) / p<sub>c</sub></dt><dd id="rEps">–</dd>
+    </dl>
+  </div>
+</div>
+
+<section>
+  <h2>Order parameters across p</h2>
+  <p class="prose">A second simulation adds sites one at a time in random order (the Newman–Ziff method), so a single run gives every p at once. It repeats this for four lattice sizes and averages; add L = 256 for sharper exponents if your device can handle it. The spanning probability R and the largest-cluster share P play the role of order parameters; χ and ξ are the “susceptibility” and correlation length, and both peak at the threshold. Click any chart to move p.</p>
+  <div class="status">
+    <span id="chips" class="row" style="gap:14px"></span>
+    <span class="bar" aria-hidden="true"><i id="prog"></i></span>
+    <span id="stTxt"></span>
+    <button id="run">Pause</button>
+    <button id="more">Add more samples</button>
+    <button id="add256">Include L = 256</button>
+    <button id="restart">Start over</button>
+  </div>
+  <div class="figs">
+    <figure class="clickable"><figcaption><b>Spanning probability R<sub>L</sub>(p)</b>Chance that a cluster connects top and bottom. The step sharpens as L grows.</figcaption><canvas id="cR"></canvas></figure>
+    <figure class="clickable"><figcaption><b>Largest-cluster share P<sub>L</sub>(p)</b>Tends to zero below p<sub>c</sub> and to P<sub>∞</sub>(p) above it.</figcaption><canvas id="cP"></canvas></figure>
+    <figure class="clickable"><figcaption><b>Mean cluster size χ<sub>L</sub>(p)</b>Sum of s² over all clusters except the largest, per site. Diverges at p<sub>c</sub> as L → ∞.</figcaption><canvas id="cX"></canvas></figure>
+    <figure class="clickable"><figcaption><b>Correlation length ξ<sub>L</sub>(p)</b>Size-weighted radius of gyration of the finite clusters. Capped by the lattice size.</figcaption><canvas id="cXi"></canvas></figure>
+    <figure><figcaption><b>P ∝ (p − p<sub>c</sub>)<sup>β</sup> above the threshold</b>Log–log. The dashed line has the exact slope β = 5/36; finite lattices flatten out close to p<sub>c</sub>.</figcaption><canvas id="cPb"></canvas></figure>
+    <figure><figcaption><b>χ ∝ (p<sub>c</sub> − p)<sup>−γ</sup> below the threshold</b>Log–log. The dashed line has slope −γ = −43/18; each size bends over once ξ reaches L.</figcaption><canvas id="cXg"></canvas></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Measuring the exponents</h2>
+  <p class="prose">Right at the threshold nothing sets a length scale except the lattice itself, so every quantity scales as a power of L. Slopes on these log–log plots give the exponent ratios directly. The cluster-size distribution n<sub>s</sub> comes from separate periodic 256 × 256 lattices filled at p<sub>c</sub>.</p>
+  <div class="row" style="margin-top:6px">
+    <fieldset>
+      <legend>Evaluate the quantities at</legend>
+      <div class="seg">
+        <label><input type="radio" name="pe" value="known" checked><span>Known p<sub>c</sub> = 0.592746</span></label>
+        <label><input type="radio" name="pe" value="est"><span>This run’s estimate</span></label>
+      </div>
+    </fieldset>
+  </div>
+  <div class="figs">
+    <figure><figcaption><b>Steepest slope of R: max dR/dp ∝ L<sup>1/ν</sup></b>The transition window shrinks like L<sup>−1/ν</sup>.</figcaption><canvas id="fNu"></canvas><p class="fit" id="tNu"></p></figure>
+    <figure><figcaption><b>Order parameter at p<sub>c</sub>: P ∝ L<sup>−β/ν</sup></b>The spanning cluster occupies a vanishing share of sites.</figcaption><canvas id="fB"></canvas><p class="fit" id="tB"></p></figure>
+    <figure><figcaption><b>Peak susceptibility: χ<sub>max</sub> ∝ L<sup>γ/ν</sup></b></figcaption><canvas id="fG"></canvas><p class="fit" id="tG"></p></figure>
+    <figure><figcaption><b>Largest cluster mass at p<sub>c</sub>: M ∝ L<sup>D</sup></b>The incipient spanning cluster is a fractal.</figcaption><canvas id="fD"></canvas><p class="fit" id="tD"></p></figure>
+    <figure><figcaption><b>Correlation length at p<sub>c</sub>: ξ ∝ L</b>Finite-size scaling predicts slope 1.</figcaption><canvas id="fXi"></canvas><p class="fit" id="tXi"></p></figure>
+    <figure><figcaption><b>Cluster numbers at p<sub>c</sub>: n<sub>s</sub> ∝ s<sup>−τ</sup></b>Clusters of size s per site, log-binned, on periodic 256 × 256 lattices so edges do not cut clusters. Fit over 20 ≤ s ≤ 3000.</figcaption><canvas id="fTau"></canvas><p class="fit" id="tTau"></p></figure>
+  </div>
+  <div class="tbl"><table id="expTable" aria-label="Critical exponents"></table></div>
+</section>
+
+<section>
+  <h2>Scaling relations</h2>
+  <p class="prose">The exponents are not independent. Hyperscaling ties them to the dimension d = 2, and the cluster-number exponent τ links to the fractal dimension. Here each relation is checked with numbers measured independently above; small mismatches come from finite sizes and sampling noise, and they shrink as you add samples.</p>
+  <div class="tbl"><table id="relTable" aria-label="Scaling relations"></table></div>
+</section>
+
+<section>
+  <h2>Data collapse</h2>
+  <p class="prose">If finite-size scaling holds, Q<sub>L</sub>(p) = L<sup>−a</sup> f((p − p<sub>c</sub>) L<sup>1/ν</sup>) for one function f. Rescale the axes and the curves should fall onto a single line only when p<sub>c</sub>, 1/ν and a are right. Try moving the sliders away from the correct values to see how sensitive it is.</p>
+  <div class="two">
+    <figure><figcaption><b id="colTitle">Collapsed curves</b><span id="colSub"></span></figcaption><canvas id="cCol"></canvas></figure>
+    <div>
+      <div class="field" style="margin-bottom:14px"><label class="lab" for="colQ">Quantity</label>
+        <select id="colQ">
+          <option value="R">Spanning probability R (a = 0)</option>
+          <option value="P" selected>Largest-cluster share P (a = β/ν)</option>
+          <option value="chi">Mean cluster size χ (a = −γ/ν)</option>
+          <option value="xi">Correlation length ξ (a = −1)</option>
+        </select>
+      </div>
+      <div class="sl"><label for="sPc">p<sub>c</sub></label><output id="oPc"></output><input type="range" id="sPc" min="0.575" max="0.61" step="0.0001"></div>
+      <div class="sl"><label for="sNu">1/ν</label><output id="oNu"></output><input type="range" id="sNu" min="0.3" max="1.3" step="0.001"></div>
+      <div class="sl"><label for="sA">Vertical exponent a</label><output id="oA"></output><input type="range" id="sA" min="-2.5" max="0.6" step="0.001"></div>
+      <div class="row"><button id="colExact">Use exact exponents</button><button id="colMeas">Use measured exponents</button></div>
+      <p class="note" style="margin-top:12px">The vertical axis plots L<sup>a</sup>·Q, so for P the exponent a is β/ν and for χ it is −γ/ν.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Fractal geometry of clusters</h2>
+  <p class="prose">The cluster numbers n<sub>s</sub> and the order parameter P<sub>∞</sub> only count how big clusters are; they say nothing about shape. To see the geometry, mark out square windows of side ℓ around sites of the percolating cluster and count how many of its sites fall inside, M(p;ℓ). At p<sub>c</sub> this mass grows as ℓ<sup>D</sup> with the fractal dimension D = 91/48 ≈ 1.90, smaller than d = 2. The density P(p;ℓ) = M/ℓ<sup>d</sup> ∝ ℓ<sup>D−d</sup> therefore keeps falling as the window grows, which is how P<sub>∞</sub>(p<sub>c</sub>) = 0 even though a spanning cluster exists. These panels use their own 512 × 512 lattice and follow the p slider at the top of the page.</p>
+  <p class="note" id="fracNote">Preparing the 512 × 512 lattice…</p>
+  <div class="figs">
+    <figure class="sq"><figcaption><b>(a) The largest cluster</b>Only sites of the largest cluster are drawn. The outlined corner is enlarged in (b).</figcaption><canvas id="fA" aria-label="Largest cluster on the 512 by 512 lattice"></canvas></figure>
+    <figure class="sq"><figcaption><b>(b) Its upper-right corner, enlarged</b>At p<sub>c</sub> the enlargement looks statistically like the whole: self-similarity. Well above p<sub>c</sub> the whole looks uniform while the close-up still has holes.
+      <span class="row" style="margin-top:6px"><label for="zoomSel" style="font-size:13px">Enlargement</label><select id="zoomSel"><option value="2" selected>× 2 (a quarter of the area)</option><option value="4">× 4 (a sixteenth of the area)</option></select></span></figcaption><canvas id="fZ" aria-label="Enlarged corner of the largest cluster"></canvas></figure>
+    <figure><figcaption><b>Mass in a window: M(p;ℓ) ∝ ℓ<sup>D</sup></b>Averaged over 300 windows centered on sites of the largest cluster. Dashed: slope D = 91/48. Dotted: slope d = 2. The red line marks ξ at the current p.</figcaption><canvas id="gM"></canvas><p class="fit" id="tM"></p></figure>
+    <figure><figcaption><b>Density against window size: P(p;ℓ) = M/ℓ<sup>2</sup></b>At p<sub>c</sub> it falls as ℓ<sup>D−d</sup> forever. Above p<sub>c</sub> it falls only until ℓ ≈ ξ, then levels off at P<sub>∞</sub>(p): the shorter length scale wins.</figcaption><canvas id="gP"></canvas><p class="fit" id="legP"></p></figure>
+    <figure><figcaption><b>Size against radius of gyration: s ∝ R<sub>s</sub><sup>D</sup></b>Gray: individual finite clusters at the current p. Blue: R<sub>s</sub> = √⟨R²(s)⟩ averaged over clusters of similar size.</figcaption><canvas id="gR"></canvas><p class="fit" id="tR"></p></figure>
+    <figure><figcaption><b>Crossover for single clusters: M(s;ℓ)/ℓ<sup>D</sup> = m(ℓ/R<sub>s</sub>)</b>Windows centered on the center of mass of the largest finite clusters away from the edges. Flat for ℓ ≪ R<sub>s</sub>, slope −D (dashed) once the whole cluster fits inside.</figcaption><canvas id="gX"></canvas><p class="fit" id="tX"></p></figure>
+    <figure><figcaption><b>Scaling function above p<sub>c</sub>: M<sub>∞</sub>(ξ;ℓ)/ℓ<sup>D</sup> = m<sub>∞</sub>(ℓ/ξ)</b>The curves for several p above p<sub>c</sub> share one shape once ℓ is measured in units of ξ: constant for ℓ ≪ ξ, slope d − D (dashed) for ℓ ≫ ξ.</figcaption><canvas id="gC"></canvas><p class="fit" id="legC"></p></figure>
+  </div>
+  <div class="tbl"><table id="dTable" aria-label="Fractal dimension from several methods"></table></div>
+  <p class="prose" style="margin-top:22px">The same two relations, D = 1/(σν) from s<sub>ξ</sub> ∝ ξ<sup>D</sup> and the hyperscaling relation D − d = −β/ν from the mass of the percolating cluster, can be checked in other geometries. On the Bethe lattice the number of sites within distance ℓ grows exponentially rather than as ℓ<sup>d</sup>, so it behaves like infinite dimension, and hyperscaling then points to d = 6, the upper critical dimension. In one dimension P<sub>∞</sub> jumps from 0 to 1 at p<sub>c</sub> = 1, so the transition is not critical in the strict sense, but the relations still hold with β = 0.</p>
+  <div class="tbl"><table id="dimTable" aria-label="Fractal dimension and scaling relations across lattices"></table></div>
+</section>
+
+<section>
+  <h2>Real-space renormalization</h2>
+  <p class="prose">A classic way to solve a problem is to find its characteristic scale and break it into smaller, uncorrelated pieces. Away from p<sub>c</sub> that scale is ξ. At p<sub>c</sub> there is none, since ξ → ∞, but the system is self-similar, and the renormalization group (Kenneth Wilson, Nobel Prize 1982) turns that into a method. Rescaling every length by b > 1 sends ξ ↦ ξ/b. The only states left unchanged are ξ = 0, the empty and full lattices at p = 0 and 1, and ξ = ∞ at p<sub>c</sub>. These are the fixed points of the rescaling: 0 and 1 attract, while p<sub>c</sub> repels.</p>
+  <p class="prose">The exact rescaling T<sub>b</sub>(p) would give ν = log b / log T<sub>b</sub>′(p<sub>c</sub>), but T<sub>b</sub> is unknown. Since ν is set by large-scale behavior, fluctuations smaller than b can be smeared out. The real-space RG transformation R<sub>b</sub> does this in three steps: (a) divide the lattice into blocks of side b, (b) replace each block by one site occupied with probability R<sub>b</sub>(p) according to a rule, and (c) shrink all lengths by b. Its fixed point R<sub>b</sub>(p*) = p* approximates p<sub>c</sub>, and ν ≈ log b / log R<sub>b</sub>′(p*).</p>
+  <div class="row" style="gap:18px; margin-top:12px; align-items:flex-end">
+    <div class="field"><label class="lab" for="rgRule">Lattice and block rule</label>
+      <select id="rgRule">
+        <option value="chain">Chain (d = 1), b = 3, all three sites occupied</option>
+        <option value="tri">Triangular lattice, b = √3, majority of three</option>
+        <option value="sq2" selected>Square lattice, b = 2, vertical spanning</option>
+        <option value="sq3s">Square lattice, b = 3, vertical spanning</option>
+        <option value="sq3m">Square lattice, b = 3, majority (5 of 9)</option>
+      </select>
+    </div>
+    <div class="field" style="flex:1 1 260px"><label class="lab" for="rgP">Starting occupation probability p = <output id="rgPOut"></output></label>
+      <input type="range" id="rgP" min="0" max="1" step="0.001">
+    </div>
+    <div class="row">
+      <button id="rgLo">p* − 0.03</button><button id="rgFix" class="primary">p*</button><button id="rgHi">p* + 0.03</button><button id="rgPc">Exact p<sub>c</sub></button><button id="rgSeed">New random lattice</button>
+    </div>
+  </div>
+  <div class="figs">
+    <figure class="wide"><figcaption><b>Repeated coarse-graining</b>Each panel applies the block rule to the one before and is redrawn at the same size, which is the rescaling step. Below p* the picture drains toward the empty lattice, above it fills toward the full one, and at p* it keeps looking alike.</figcaption>
+      <div class="stages" id="rgStages"></div><p class="fit" id="rgStageNote"></p></figure>
+    <figure><figcaption><b>The RG map R<sub>b</sub>(p) and its iteration</b>Solid: R<sub>b</sub>(p). Dashed: the diagonal, whose crossings are fixed points. The red staircase follows p ↦ R<sub>b</sub>(p) ↦ R<sub>b</sub>(R<sub>b</sub>(p)) ↦ … from the starting p.</figcaption><canvas id="rgMap"></canvas></figure>
+    <figure><figcaption><b>Flow in parameter space</b>Arrows show where one RG step moves p. Stars are fixed points; the open one repels.</figcaption><canvas id="rgFlow" style="height:84px"></canvas>
+      <dl class="readouts" style="margin-top:10px" id="rgRead"></dl></figure>
+    <figure><figcaption><b>Whole lattices as RG blocks</b>The spanning probability R<sub>L</sub>(p) from the size sweep is the vertical spanning rule with b = L, computed exactly inside each block. Dots mark its fixed points p*<sub>L</sub>, which close in on p<sub>c</sub> as L grows.</figcaption><canvas id="rgMC"></canvas></figure>
+  </div>
+  <div class="tbl"><table id="rgStageTable" aria-label="Coarse-graining stages"></table></div>
+  <div class="tbl"><table id="rgTable" aria-label="Fixed points and nu for each rule"></table></div>
+  <div class="tbl"><table id="rgMCTable" aria-label="Renormalization with whole lattices as blocks"></table></div>
+  <p class="prose" style="margin-top:22px">Coarse-graining throws information away. A 3 × 3 block has 2<sup>9</sup> = 512 configurations but becomes one site with 2, and in general N sites become N/b<sup>d</sup>, so the step cannot be undone. Strictly the transformations form a semigroup, not a group. The approximation also truncates parameter space. Two blocks can be linked in the original lattice yet end up only diagonally adjacent after coarse-graining. Keeping every connection would need next-nearest-neighbor bonds, then ever longer ones, an infinite set of parameters {p}, and the rules above keep only p. That is why p* ≠ p<sub>c</sub> and ν is only approximate on the square lattice. The chain needs no truncation and is exact, the triangular rule happens to hit p<sub>c</sub> = 1/2 exactly, and larger blocks (the last table) close the gap.</p>
+</section>
+
+<section id="references">
+  <h2>References</h2>
+  <p class="prose">The fractal-geometry and renormalization sections follow lecture notes by Sang Hoon Lee, which are based on the key reference below.</p>
+  <div class="keyref">
+    <p class="prose" style="margin:0"><b>Key reference.</b> K. Christensen and N. R. Moloney, <i>Complexity and Criticality</i>, Imperial College Press, London (2005). Chapter 1 covers percolation, including cluster numbers, the order parameter, fractal geometry, finite-size scaling and real-space renormalization; Appendices C and D cover homogeneous functions and fractals.</p>
+  </div>
+  <ol class="refs">
+    <li>M. E. J. Newman and R. M. Ziff, “Efficient Monte Carlo algorithm and high-precision results for percolation,” <i>Phys. Rev. Lett.</i> <b>85</b>, 4104 (2000). The site-by-site sweep and the binomial convolution used for every curve over p.</li>
+    <li>M. E. J. Newman and R. M. Ziff, “Fast Monte Carlo algorithm for site or bond percolation,” <i>Phys. Rev. E</i> <b>64</b>, 016706 (2001). Details of the algorithm and the value p<sub>c</sub> = 0.59274621.</li>
+    <li>R. E. Tarjan, “Efficiency of a good but not linear set union algorithm,” <i>J. ACM</i> <b>22</b>, 215 (1975). Union–find, used for all cluster labeling.</li>
+    <li>M. E. Fisher and M. N. Barber, “Scaling theory for finite-size effects in the critical region,” <i>Phys. Rev. Lett.</i> <b>28</b>, 1516 (1972). Finite-size scaling and data collapse.</li>
+    <li>M. P. M. den Nijs, “A relation between the temperature exponents of the eight-vertex and q-state Potts model,” <i>J. Phys. A</i> <b>12</b>, 1857 (1979). Exact ν = 4/3 in two dimensions.</li>
+    <li>B. Nienhuis, “Critical behavior of two-dimensional spin models and charge asymmetry in the Coulomb gas representation,” <i>J. Stat. Phys.</i> <b>34</b>, 731 (1984). Coulomb-gas derivation of the exact 2D exponents.</li>
+    <li>K. G. Wilson, “Renormalization group and critical phenomena. I,” <i>Phys. Rev. B</i> <b>4</b>, 3174 (1971). The renormalization group.</li>
+    <li>P. J. Reynolds, H. E. Stanley and W. Klein, “Large-cell Monte Carlo renormalization group for percolation,” <i>Phys. Rev. B</i> <b>21</b>, 1223 (1980). Using whole lattices as RG blocks, as in the last renormalization table.</li>
+    <li>D. Stauffer and A. Aharony, <i>Introduction to Percolation Theory</i>, 2nd ed., Taylor &amp; Francis, London (1994). General background on percolation.</li>
+  </ol>
+</section>
+
+<footer>
+  Site percolation, open boundaries, spanning means a cluster touching both the top and bottom rows. Curves for each p are obtained from the fixed-number-of-sites runs by convolving with the binomial distribution, which gives smooth curves and exact derivatives. Exact 2D values come from Coulomb-gas and conformal field theory results (den Nijs, Nienhuis). Numbers improve with more samples; the smallest sizes carry the strongest corrections to scaling.
+  <p style="margin-top:14px">Lecture notes by Sang Hoon Lee. Created by Claude Opus 5.5.</p>
+</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const PC = 0.592746;
+const EX = {nuInv:0.75, bn:5/48, gn:43/24, D:91/48, tau:187/91, nu:4/3, beta:5/36, gamma:43/18, alpha:-2/3, eta:5/24, delta:91/5, sigma:36/91};
+const SIZES = [16,32,64,128,256];
+const BASE_TARGET = [800,400,160,64,32];
+let targetMul = 1, use256 = false;
+const tgt = i => (SIZES[i]===256 && !use256) ? 0 : BASE_TARGET[i]*targetMul;
+const PMIN = 0.40, PMAX = 0.80, PSTEP = 0.001;
+const GRID = [];
+for (let i = 0; i <= Math.round((PMAX-PMIN)/PSTEP); i++) GRID.push(PMIN + i*PSTEP);
+const $ = id => document.getElementById(id);
+
+/* ---------- colors ---------- */
+const C = {};
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  ['paper','panel','ink','muted','rule','grid','accent','crit','l16','l32','l64','l128','l256'].forEach(k => C[k] = cs.getPropertyValue('--'+k).trim());
+}
+const LCOL = L => C['l'+L];
+function hexRgb(h){ h = h.replace('#',''); if (h.length===3) h = h.split('').map(c=>c+c).join(''); const v = parseInt(h,16); return [(v>>16)&255,(v>>8)&255,v&255]; }
+function hslRgb(h,s,l){ s/=100; l/=100; const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l); const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1))); return [Math.round(255*f(0)),Math.round(255*f(8)),Math.round(255*f(4))]; }
+let PAL = [];
+function buildPalette(){
+  const dark = hexRgb(C.panel)[0] < 100;
+  PAL = [];
+  for (let i=0;i<64;i++){ const h=(i*137.508+20)%360; PAL.push(hslRgb(h, dark?38:42, dark?46+ (i%3)*5 : 64+(i%3)*5)); }
+}
+
+/* ---------- union-find on a full lattice (for the view and n_s) ---------- */
+function labelLattice(L, occ, parent, size, periodic){
+  const N = L*L;
+  for (let i=0;i<N;i++){ parent[i] = occ[i] ? i : -1; size[i] = occ[i] ? 1 : 0; }
+  const find = i => { while (parent[i]!==i){ const g=parent[parent[i]]; parent[i]=g; i=g; } return i; };
+  const uni = (a,b) => { a=find(a); b=find(b); if (a===b) return; if (size[a]<size[b]){const t=a;a=b;b=t;} parent[b]=a; size[a]+=size[b]; };
+  for (let y=0;y<L;y++) for (let x=0;x<L;x++){
+    const i=y*L+x; if (!occ[i]) continue;
+    if (periodic){ const l=y*L+(x+L-1)%L, u=((y+L-1)%L)*L+x; if (occ[l]) uni(i,l); if (occ[u]) uni(i,u); }
+    else { if (x>0 && occ[i-1]) uni(i,i-1); if (y>0 && occ[i-L]) uni(i,i-L); }
+  }
+  for (let i=0;i<N;i++) if (parent[i]>=0) parent[i]=find(i);
+}
+
+/* ---------- lattice view ---------- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const V = {L:128, seed:7, p:0.5927, mode:'all'};
+function genView(){
+  const L=V.L, N=L*L, rng=mulberry32(V.seed*9973+L);
+  V.u = new Float32Array(N); for (let i=0;i<N;i++) V.u[i]=rng();
+  V.occ=new Uint8Array(N); V.parent=new Int32Array(N); V.size=new Int32Array(N);
+  V.sx=new Float64Array(N); V.sy=new Float64Array(N); V.sq=new Float64Array(N); V.fl=new Uint8Array(N);
+  V.img = null;
+}
+function updateView(){
+  const L=V.L, N=L*L, {occ,parent,size,sx,sy,sq,fl,u}=V;
+  let nOcc=0;
+  for (let i=0;i<N;i++){ const o = u[i]<V.p ? 1:0; occ[i]=o; nOcc+=o; }
+  labelLattice(L,occ,parent,size);
+  sx.fill(0); sy.fill(0); sq.fill(0); fl.fill(0);
+  for (let i=0;i<N;i++){ const r=parent[i]; if (r<0) continue; const x=i%L, y=(i/L)|0; sx[r]+=x; sy[r]+=y; sq[r]+=x*x+y*y; if (y===0) fl[r]|=1; if (y===L-1) fl[r]|=2; }
+  let S2=0, T=0, smax=0, maxRoot=-1, nc=0, spans=false;
+  for (let i=0;i<N;i++){
+    if (parent[i]!==i) continue;
+    const s=size[i]; nc++; S2+=s*s; T += s*sq[i]-sx[i]*sx[i]-sy[i]*sy[i];
+    if (s>smax){smax=s; maxRoot=i;}
+    if (fl[i]===3) spans=true;
+  }
+  let chi=0, xi=0;
+  if (maxRoot>=0){
+    const d=S2-smax*smax; chi=d/N;
+    const cm=smax*sq[maxRoot]-sx[maxRoot]*sx[maxRoot]-sy[maxRoot]*sy[maxRoot];
+    xi = d>0 ? Math.sqrt(Math.max(0,2*(T-cm)/d)) : 0;
+  }
+  V.maxRoot=maxRoot;
+  $('rOcc').textContent=(nOcc/N).toFixed(4);
+  $('rNc').textContent=(nc/N).toFixed(4);
+  $('rSpan').textContent= spans ? 'yes' : 'no';
+  $('rSpan').style.color = spans ? 'var(--accent)' : '';
+  $('rP').textContent=(smax/N).toFixed(4);
+  $('rChi').textContent=chi.toFixed(2);
+  $('rXi').textContent=xi.toFixed(2);
+  const eps=(V.p-PC)/PC; $('rEps').textContent=(eps>=0?'+':'−')+Math.abs(eps).toFixed(4);
+  renderLattice();
+}
+function renderLattice(){
+  const L=V.L, N=L*L, cv=$('lat');
+  if (!V.off || V.off.width!==L){ V.off=document.createElement('canvas'); V.off.width=L; V.off.height=L; V.img=null; }
+  const octx=V.off.getContext('2d');
+  if (!V.img) V.img=octx.createImageData(L,L);
+  const d=V.img.data, emp=hexRgb(C.panel), acc=hexRgb(C.accent), mut=hexRgb(C.muted), big=V.mode==='big';
+  for (let i=0;i<N;i++){
+    const r=V.parent[i]; let c;
+    if (r<0) c=emp; else if (r===V.maxRoot) c=acc; else if (big) c=mut; else c=PAL[(Math.imul(r,2654435761)>>>26)];
+    const k=i*4; d[k]=c[0]; d[k+1]=c[1]; d[k+2]=c[2]; d[k+3]=255;
+  }
+  octx.putImageData(V.img,0,0);
+  const dpr=window.devicePixelRatio||1, w=Math.max(1,Math.round(cv.clientWidth*dpr));
+  if (cv.width!==w){cv.width=w; cv.height=w;}
+  const ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=false; ctx.drawImage(V.off,0,0,w,w);
+}
+
+/* ---------- Newman–Ziff sweep ---------- */
+const sweep = SIZES.map(L => ({L, N:L*L, cnt:0, curve:null, alloc:false}));
+function alloc(st){ if (st.alloc) return; const N=st.N;
+  Object.assign(st,{sumP:new Float64Array(N+1), sumChi:new Float64Array(N+1), sumXi:new Float64Array(N+1), spanHist:new Float64Array(N+1), Rn:new Float64Array(N+1),
+  order:new Int32Array(N), parent:new Int32Array(N), size:new Float64Array(N), sx:new Float64Array(N), sy:new Float64Array(N), sq:new Float64Array(N), fl:new Uint8Array(N)});
+  st.alloc=true; }
+
+function nzSample(st){
+  alloc(st);
+  const {L,N,order,parent,size,sx,sy,sq,fl,sumP,sumChi,sumXi,spanHist}=st;
+  for (let i=0;i<N;i++) order[i]=i;
+  for (let i=N-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=order[i]; order[i]=order[j]; order[j]=t; }
+  parent.fill(-1);
+  let S2=0, T=0, smax=0, maxRoot=-1, spanned=false;
+  for (let i=0;i<N;i++){
+    const s=order[i], x=s%L, y=(s/L)|0;
+    parent[s]=s; size[s]=1; sx[s]=x; sy[s]=y; sq[s]=x*x+y*y; fl[s]=(y===0?1:0)|(y===L-1?2:0);
+    S2+=1; let r=s;
+    for (let k=0;k<4;k++){
+      let nb;
+      if (k===0){ if (x===0) continue; nb=s-1; }
+      else if (k===1){ if (x===L-1) continue; nb=s+1; }
+      else if (k===2){ if (y===0) continue; nb=s-L; }
+      else { if (y===L-1) continue; nb=s+L; }
+      if (parent[nb]<0) continue;
+      let b=nb; while (parent[b]!==b){ const g=parent[parent[b]]; parent[b]=g; b=g; }
+      if (b===r) continue;
+      let a=r;
+      T -= size[a]*sq[a]-sx[a]*sx[a]-sy[a]*sy[a] + size[b]*sq[b]-sx[b]*sx[b]-sy[b]*sy[b];
+      S2 += 2*size[a]*size[b];
+      if (size[a]<size[b]){ const t=a; a=b; b=t; }
+      parent[b]=a; size[a]+=size[b]; sx[a]+=sx[b]; sy[a]+=sy[b]; sq[a]+=sq[b]; fl[a]|=fl[b];
+      T += size[a]*sq[a]-sx[a]*sx[a]-sy[a]*sy[a];
+      r=a;
+    }
+    if (size[r]>=smax){ smax=size[r]; maxRoot=r; }
+    const n=i+1;
+    if (!spanned && fl[r]===3){ spanned=true; spanHist[n]+=1; }
+    sumP[n]+=smax/N;
+    const d=S2-smax*smax; sumChi[n]+=d/N;
+    if (d>0){ const m=maxRoot; const cm=size[m]*sq[m]-sx[m]*sx[m]-sy[m]*sy[m]; const v=2*(T-cm)/d; if (v>0) sumXi[n]+=Math.sqrt(v); }
+  }
+  st.cnt++;
+}
+
+const wbuf = new Float64Array(80000);
+function weights(N,p){
+  p=Math.min(1-1e-9,Math.max(1e-9,p)); const q=1-p;
+  const mode=Math.min(N,Math.floor((N+1)*p)), sd=Math.sqrt(N*p*q), span=Math.ceil(9*sd+8);
+  const lo=Math.max(0,mode-span), hi=Math.min(N,mode+span), r=p/q;
+  wbuf[mode-lo]=1;
+  for (let n=mode;n<hi;n++) wbuf[n+1-lo]=wbuf[n-lo]*(N-n)/(n+1)*r;
+  for (let n=mode;n>lo;n--) wbuf[n-1-lo]=wbuf[n-lo]*n/(N-n+1)/r;
+  let s=0; for (let k=0;k<=hi-lo;k++) s+=wbuf[k];
+  return {lo,hi,s};
+}
+function canonAt(st,p){
+  const {N,cnt}=st, {lo,hi,s}=weights(N,p), den=p*(1-p);
+  let R=0,P=0,X=0,Z=0,dR=0;
+  for (let n=lo;n<=hi;n++){ const w=wbuf[n-lo]/s; const rn=st.Rn[n]; R+=w*rn; P+=w*st.sumP[n]; X+=w*st.sumChi[n]; Z+=w*st.sumXi[n]; dR+=w*(n-N*p)/den*rn; }
+  return {R,P:P/cnt,chi:X/cnt,xi:Z/cnt,dR};
+}
+function prepare(st){ let a=0; for (let n=0;n<=st.N;n++){ a+=st.spanHist[n]; st.Rn[n]=a/st.cnt; } }
+
+/* ---------- n_s at p_c ---------- */
+const NS = {L:256, cnt:0, target:40, b:1.4, bins:new Float64Array(64)};
+NS.occ=new Uint8Array(NS.L*NS.L); NS.parent=new Int32Array(NS.L*NS.L); NS.size=new Int32Array(NS.L*NS.L);
+function nsSample(){
+  const L=NS.L, N=L*L;
+  for (let i=0;i<N;i++) NS.occ[i]=Math.random()<PC?1:0;
+  labelLattice(L,NS.occ,NS.parent,NS.size,true);
+  let smax=0, mr=-1;
+  for (let i=0;i<N;i++) if (NS.parent[i]===i && NS.size[i]>smax){smax=NS.size[i]; mr=i;}
+  const lb=Math.log(NS.b);
+  for (let i=0;i<N;i++) if (NS.parent[i]===i && i!==mr){ const k=Math.floor(Math.log(NS.size[i])/lb+1e-9); NS.bins[k]+=1; }
+  NS.cnt++;
+}
+function nsPoints(){
+  const out=[], N=NS.L*NS.L;
+  if (!NS.cnt) return out;
+  for (let k=0;k<64;k++){
+    if (!NS.bins[k]) continue;
+    const a=Math.ceil(Math.pow(NS.b,k)-1e-9), bEnd=Math.ceil(Math.pow(NS.b,k+1)-1e-9), w=bEnd-a;
+    if (w<=0) continue;
+    out.push([Math.sqrt(a*(bEnd-1)), NS.bins[k]/(N*NS.cnt*w)]);
+  }
+  return out;
+}
+
+/* ---------- fits and derived numbers ---------- */
+function linReg(xs,ys){
+  const n=xs.length; if (n<2) return null;
+  let mx=0,my=0; for (let i=0;i<n;i++){mx+=xs[i];my+=ys[i];} mx/=n; my/=n;
+  let sxx=0,sxy=0; for (let i=0;i<n;i++){ sxx+=(xs[i]-mx)**2; sxy+=(xs[i]-mx)*(ys[i]-my); }
+  const slope=sxy/sxx, icpt=my-slope*mx;
+  let se=NaN; if (n>2){ let r=0; for (let i=0;i<n;i++) r+=(ys[i]-icpt-slope*xs[i])**2; se=Math.sqrt(r/(n-2)/sxx); }
+  return {slope,icpt,se};
+}
+const M = {};
+function computeFSS(){
+  const use=sweep.filter(s=>s.curve && s.cnt>=4);
+  M.use=use;
+  M.rows=use.map(s=>{
+    const c=s.curve; let md=0, mc=0, pc50=NaN;
+    for (let i=0;i<GRID.length;i++){ if (c.dR[i]>md) md=c.dR[i]; if (c.chi[i]>mc) mc=c.chi[i]; }
+    for (let i=1;i<GRID.length;i++){ if (c.R[i-1]<0.5 && c.R[i]>=0.5){ pc50=GRID[i-1]+(0.5-c.R[i-1])/(c.R[i]-c.R[i-1])*PSTEP; break; } }
+    return {L:s.L, st:s, maxdR:md, chimax:mc, p50:pc50};
+  });
+  const lx=M.rows.map(r=>Math.log(r.L));
+  M.fNu = linReg(lx, M.rows.map(r=>Math.log(r.maxdR)));
+  M.nuInv = M.fNu ? M.fNu.slope : NaN;
+  const nuI = (M.nuInv>0.4 && M.nuInv<1.3) ? M.nuInv : EX.nuInv;
+  const good=M.rows.filter(r=>isFinite(r.p50));
+  const fp = good.length>=2 ? linReg(good.map(r=>Math.pow(r.L,-nuI)), good.map(r=>r.p50)) : null;
+  M.pcEst = fp ? fp.icpt : NaN;
+  const mode=document.querySelector('input[name=pe]:checked').value;
+  M.pEval = (mode==='est' && isFinite(M.pcEst)) ? M.pcEst : PC;
+  M.rows.forEach(r=>{ const q=canonAt(r.st,M.pEval); r.P=q.P; r.M=q.P*r.st.N; r.xi=q.xi; });
+  M.fB = linReg(lx, M.rows.map(r=>Math.log(r.P)));
+  M.fG = linReg(lx, M.rows.map(r=>Math.log(r.chimax)));
+  M.fD = linReg(lx, M.rows.map(r=>Math.log(r.M)));
+  M.fXi= linReg(lx, M.rows.map(r=>Math.log(Math.max(r.xi,1e-9))));
+  M.bn = M.fB ? -M.fB.slope : NaN;
+  M.gn = M.fG ? M.fG.slope : NaN;
+  M.D  = M.fD ? M.fD.slope : NaN;
+  M.xiS= M.fXi ? M.fXi.slope : NaN;
+  const np=nsPoints().filter(p=>p[0]>=20 && p[0]<=3000);
+  M.fTau = np.length>=3 ? linReg(np.map(p=>Math.log(p[0])), np.map(p=>Math.log(p[1]))) : null;
+  M.tau = M.fTau ? -M.fTau.slope : NaN;
+  M.nu = 1/M.nuInv; M.beta=M.bn*M.nu; M.gamma=M.gn*M.nu; M.alpha=2-2*M.nu; M.eta=2-M.gn; M.delta=1+M.gamma/M.beta; M.sigma=1/(M.nu*M.D);
+}
+
+/* ---------- plotting ---------- */
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const supNum = n => String(n).split('').map(c=>SUP[c]||c).join('');
+function niceStep(range,n){ const raw=range/n, p=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/p; return (f<1.5?1:f<3?2:f<7?5:10)*p; }
+function fmtTick(v,step){ const dec=Math.max(0,-Math.floor(Math.log10(step)+1e-9)); return (Math.abs(v)<step/2?0:v).toFixed(Math.min(dec,4)); }
+function plot(cv,o){
+  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight; if (!W||!H) return;
+  const pw_=Math.round(W*dpr), ph_=Math.round(H*dpr); if (cv.width!==pw_||cv.height!==ph_){cv.width=pw_; cv.height=ph_;}
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  const m={l:54,r:12,t:10,b:36}, pw=W-m.l-m.r, ph=H-m.t-m.b;
+  const fx=o.logx?Math.log10:v=>v, fy=o.logy?Math.log10:v=>v;
+  const series=o.series||[];
+  let [x0,x1]=o.x||[Infinity,-Infinity];
+  if (!o.x){ series.forEach(s=>s.pts.forEach(p=>{ if (isFinite(p[0])&&(!o.logx||p[0]>0)){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);} })); }
+  let y0=Infinity,y1=-Infinity;
+  if (o.y){ [y0,y1]=o.y; }
+  else {
+    series.forEach(s=>{ if (s.noScale) return; s.pts.forEach(p=>{ const y=p[1]; if (p[0]>=x0&&p[0]<=x1&&isFinite(y)&&(!o.logy||y>0)){y0=Math.min(y0,y);y1=Math.max(y1,y);} }); });
+    if (!isFinite(y0)){ y0=o.logy?0.1:0; y1=o.logy?10:1; }
+    if (o.logy){ y0/=1.3; y1*=1.3; } else { const pad=(y1-y0||1)*0.06; y0 = o.zeroY ? Math.min(0,y0) : y0-pad; y1+=pad; }
+  }
+  if (!isFinite(x0)||!isFinite(x1)){ x0=o.logx?1:0; x1=o.logx?10:1; }
+  if (x0===x1){x0-=1;x1+=1;}
+  const X0=fx(x0),X1=fx(x1),Y0=fy(y0),Y1=fy(y1);
+  const X=v=>m.l+(fx(v)-X0)/(X1-X0)*pw, Y=v=>m.t+ph-(fy(v)-Y0)/(Y1-Y0)*ph;
+  cv._inv = px => { const t=(px-m.l)/pw; const v=X0+t*(X1-X0); return o.logx?Math.pow(10,v):v; };
+  ctx.font='11px "Public Sans", system-ui, sans-serif'; ctx.lineWidth=1;
+  function ticks(lo,hi,log,custom){
+    if (custom) return custom.filter(v=>v>=lo*0.999&&v<=hi*1.001).map(v=>[v,String(v)]);
+    if (log){
+      if (!(lo>0)||!isFinite(hi)) return [];
+      const a=Math.floor(Math.log10(lo)), b=Math.ceil(Math.log10(hi)), out=[];
+      if (b-a>40) return [];
+      const mults = (b-a)<=1 ? [1,1.5,2,3,5,7] : (b-a)<=2 ? [1,2,5] : [1];
+      const stepK = (b-a)>6 ? 2 : 1;
+      for (let k=a;k<=b;k+=1) if (((k%stepK)+stepK)%stepK===0) mults.forEach(mu=>{ const v=mu*Math.pow(10,k); if (v>=lo&&v<=hi) out.push([v, mu===1 ? (k>=0&&k<=3 ? String(Math.pow(10,k)) : '10'+supNum(k)) : (k>=0? String(v): String(+v.toPrecision(2)))]); });
+      return out;
+    }
+    const st=niceStep(hi-lo,5), out=[];
+    if (!(st>0)||!isFinite(lo)||!isFinite(hi)) return out;
+    for (let v=Math.ceil(lo/st)*st; v<=hi+st*1e-6; v+=st) out.push([v,fmtTick(v,st)]);
+    return out;
+  }
+  ctx.fillStyle=C.panel; ctx.fillRect(m.l,m.t,pw,ph);
+  ctx.strokeStyle=C.grid; ctx.fillStyle=C.muted;
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ticks(x0,x1,o.logx,o.xticks).forEach(([v,l])=>{ const px=Math.round(X(v))+.5; ctx.beginPath(); ctx.moveTo(px,m.t); ctx.lineTo(px,m.t+ph); ctx.stroke(); ctx.fillText(l,px,m.t+ph+5); });
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  ticks(y0,y1,o.logy).forEach(([v,l])=>{ const py=Math.round(Y(v))+.5; ctx.beginPath(); ctx.moveTo(m.l,py); ctx.lineTo(m.l+pw,py); ctx.stroke(); ctx.fillText(l,m.l-6,py); });
+  ctx.strokeStyle=C.rule; ctx.strokeRect(m.l+.5,m.t+.5,pw-1,ph-1);
+  ctx.save(); ctx.beginPath(); ctx.rect(m.l,m.t,pw,ph); ctx.clip();
+  (o.vlines||[]).forEach(v=>{ if (v.x<x0||v.x>x1) return; ctx.strokeStyle=v.color; ctx.lineWidth=v.width||1; ctx.setLineDash(v.dash||[]); const px=X(v.x); ctx.beginPath(); ctx.moveTo(px,m.t); ctx.lineTo(px,m.t+ph); ctx.stroke(); ctx.setLineDash([]); if (v.label){ ctx.fillStyle=v.color; ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText(v.label,px+4,m.t+4); } });
+  series.forEach(s=>{
+    ctx.strokeStyle=s.color; ctx.fillStyle=s.color; ctx.lineWidth=s.width||1.6; ctx.setLineDash(s.dash||[]); ctx.globalAlpha=s.alpha||1;
+    if (s.dots){ s.pts.forEach(p=>{ if (!isFinite(p[1])||(o.logy&&p[1]<=0)) return; ctx.beginPath(); ctx.arc(X(p[0]),Y(p[1]),s.r||4,0,7); ctx.fill(); }); }
+    else { ctx.beginPath(); let pen=false; s.pts.forEach(p=>{ const ok=isFinite(p[1])&&isFinite(p[0])&&(!o.logy||p[1]>0)&&(!o.logx||p[0]>0); if (!ok){pen=false;return;} const px=X(p[0]),py=Y(p[1]); if (pen) ctx.lineTo(px,py); else {ctx.moveTo(px,py); pen=true;} }); ctx.stroke(); }
+    ctx.setLineDash([]); ctx.globalAlpha=1;
+  });
+  ctx.restore();
+  ctx.fillStyle=C.muted; ctx.textAlign='center'; ctx.textBaseline='bottom';
+  if (o.xlabel) ctx.fillText(o.xlabel, m.l+pw/2, H-1);
+  if (o.ylabel){ ctx.save(); ctx.translate(11,m.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textBaseline='middle'; ctx.fillText(o.ylabel,0,0); ctx.restore(); }
+}
+
+/* ---------- charts ---------- */
+const PV = () => [{x:V.p,color:C.accent,width:1.5},{x:PC,color:C.crit,dash:[4,4],label:'pc'}];
+function sweepChart(id,key,ylabel,opt={}){
+  const ser=sweep.filter(s=>s.curve).map(s=>({color:LCOL(s.L),pts:GRID.map((p,i)=>[p,s.curve[key][i]])}));
+  plot($(id),Object.assign({x:[0.46,0.74],series:ser,vlines:PV(),xlabel:'p',ylabel},opt));
+}
+function powChart(id,key,side,slope,ylabel){
+  const ser=[]; let ref=null;
+  sweep.filter(s=>s.curve).forEach(s=>{
+    const pts=[]; GRID.forEach((p,i)=>{ const x=side>0?p-PC:PC-p; if (x>0) pts.push([x,s.curve[key][i]]); });
+    pts.sort((a,b)=>a[0]-b[0]); ser.push({color:LCOL(s.L),pts});
+    if (s.L===256 || !ref){ const q=pts.reduce((b,p)=>Math.abs(p[0]-0.08)<Math.abs(b[0]-0.08)?p:b,pts[0]); ref=q; }
+  });
+  if (ref){ const A=ref[1]/Math.pow(ref[0],slope); ser.push({color:C.ink,dash:[6,4],width:1.3,noScale:true,pts:[0.001,0.003,0.01,0.03,0.1,0.2].map(x=>[x,A*Math.pow(x,slope)])}); }
+  plot($(id),{x:[0.001,0.2],logx:true,logy:true,series:ser,xlabel:side>0?'p − pc':'pc − p',ylabel});
+}
+const LT=[16,32,64,128,256];
+function fssChart(id,tid,key,fit,sign,name,exact,exLabel){
+  const rows=M.rows||[];
+  const ser=[{dots:true,color:C.ink,pts:[]}];
+  rows.forEach(r=>ser.push({dots:true,r:5,color:LCOL(r.L),pts:[[r.L,r[key]]]}));
+  if (fit) ser.push({color:C.ink,dash:[6,4],width:1.2,pts:[12,340].map(L=>[L,Math.exp(fit.icpt+fit.slope*Math.log(L))])});
+  plot($(id),{x:[12,340],logx:true,logy:true,xticks:LT,series:ser,xlabel:'L',ylabel:key==='maxdR'?'max dR/dp':key==='chimax'?'χ max':key});
+  const t=$(tid);
+  if (!fit){ t.textContent='Waiting for at least two lattice sizes.'; return; }
+  const v=sign*fit.slope, se=isFinite(fit.se)?' ± '+fit.se.toFixed(3):'';
+  t.innerHTML=`${name} ≈ <b>${v.toFixed(3)}</b>${se} <span style="color:var(--muted)">exact ${exLabel} = ${exact.toFixed(4)}</span>`;
+}
+function nsChart(){
+  const pts=nsPoints(), ser=[{dots:true,r:3.5,color:C.l256,pts}];
+  if (M.fTau) ser.push({color:C.ink,dash:[6,4],width:1.2,pts:[20,3000].map(s=>[s,Math.exp(M.fTau.icpt+M.fTau.slope*Math.log(s))])});
+  plot($('fTau'),{logx:true,logy:true,series:ser,xlabel:'cluster size s',ylabel:'n_s'});
+  $('tTau').innerHTML = M.fTau ? `τ ≈ <b>${M.tau.toFixed(3)}</b>${isFinite(M.fTau.se)?' ± '+M.fTau.se.toFixed(3):''} from ${NS.cnt} lattices <span style="color:var(--muted)">exact 187/91 = ${EX.tau.toFixed(4)}</span>` : (NS.cnt ? 'Collecting clusters…' : 'Starts after the size sweep finishes.');
+}
+function colChart(){
+  const q=$('colQ').value, pc=+$('sPc').value, ni=+$('sNu').value, a=+$('sA').value;
+  const ser=sweep.filter(s=>s.curve).map(s=>{ const f=Math.pow(s.L,ni), g=Math.pow(s.L,a); return {color:LCOL(s.L),pts:GRID.map((p,i)=>[(p-pc)*f, s.curve[q][i]*g])}; });
+  const names={R:'R',P:'P',chi:'χ',xi:'ξ'};
+  $('colTitle').textContent=`L^a · ${names[q]} against (p − pc) L^(1/ν)`;
+  plot($('cCol'),{x:[-4,4],series:ser,xlabel:'(p − pc) · L^(1/ν)',ylabel:`L^a · ${names[q]}`});
+}
+function legendChips(){
+  $('chips').innerHTML=sweep.map((s,i)=>(!tgt(i)&&!s.cnt)?'':`<span class="chip"><i class="sw" style="background:${LCOL(s.L)}"></i>L = ${s.L} <span style="color:var(--muted)">${s.cnt}/${tgt(i)||s.cnt}</span></span>`).join('');
+}
+function f3(v,d=3){ return isFinite(v)? v.toFixed(d) : '–'; }
+function tables(){
+  const rows=[
+    ['1/ν','slope of max dR/dp against L',M.nuInv,EX.nuInv,'3/4'],
+    ['β/ν','minus slope of P(p<sub>c</sub>) against L',M.bn,EX.bn,'5/48'],
+    ['γ/ν','slope of χ<sub>max</sub> against L',M.gn,EX.gn,'43/24'],
+    ['D','slope of M(p<sub>c</sub>) against L',M.D,EX.D,'91/48'],
+    ['τ','minus slope of n<sub>s</sub>(p<sub>c</sub>) against s',M.tau,EX.tau,'187/91'],
+    ['p<sub>c</sub>','R = ½ crossing, extrapolated in L<sup>−1/ν</sup>',M.pcEst,PC,'0.592746 (numerical)'],
+    ['ν','1 / (1/ν)',M.nu,EX.nu,'4/3'],
+    ['β','(β/ν) · ν',M.beta,EX.beta,'5/36'],
+    ['γ','(γ/ν) · ν',M.gamma,EX.gamma,'43/18'],
+    ['α','2 − dν (Josephson)',M.alpha,EX.alpha,'−2/3'],
+    ['η','2 − γ/ν (Fisher)',M.eta,EX.eta,'5/24'],
+    ['δ','1 + γ/β (Widom)',M.delta,EX.delta,'91/5'],
+    ['σ','1 / (νD)',M.sigma,EX.sigma,'36/91'],
+  ];
+  $('expTable').innerHTML='<thead><tr><th>Exponent</th><th>How it is obtained</th><th style="text-align:right">This run</th><th style="text-align:right">Exact</th><th>Exact fraction</th></tr></thead><tbody>'+
+    rows.map((r,i)=>`<tr${i===6?' style="border-top:2px solid var(--rule)"':''}><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="num">${f3(r[2],r[0].startsWith('p')?5:3)}</td><td class="num">${f3(r[3],r[0].startsWith('p')?5:4)}</td><td>${r[4]}</td></tr>`).join('')+'</tbody>';
+  const rel=[
+    ['Hyperscaling','2β/ν + γ/ν = d',2*M.bn+M.gn,2,2,'P and χ scaling, measured separately'],
+    ['Rushbrooke (with α = 2 − dν)','α + 2β + γ = 2',M.alpha+2*M.beta+M.gamma,2,2,'uses ν from R, β from P, γ from χ'],
+    ['Cluster numbers','τ = 1 + d/D',M.tau,1+2/M.D,EX.tau,'n<sub>s</sub> distribution against cluster mass'],
+    ['Susceptibility from clusters','γ/ν = D (3 − τ)',M.gn,M.D*(3-M.tau),EX.gn,'χ against M and n<sub>s</sub>'],
+    ['Order parameter from clusters','β/ν = D (τ − 2)',M.bn,M.D*(M.tau-2),EX.bn,'very sensitive to τ, since τ − 2 is small'],
+    ['Finite-size scaling of ξ','ξ(p<sub>c</sub>) ∝ L<sup>1</sup>',M.xiS,1,1,'slope of ξ at p<sub>c</sub> against L'],
+    ['Mass–radius hyperscaling','D − d = −β/ν',(F.pc&&F.pc.fWin?F.pc.fWin.slope:NaN)-2,-M.bn,-EX.bn,'D from window masses at p<sub>c</sub>, β/ν from P against L'],
+  ];
+  $('relTable').innerHTML='<thead><tr><th>Relation</th><th>Statement</th><th style="text-align:right">Left side</th><th style="text-align:right">Right side</th><th style="text-align:right">Exact</th><th>Inputs</th></tr></thead><tbody>'+
+    rel.map(r=>{ const d=Math.abs(r[2]-r[3]); const cls=!isFinite(d)?'':(d/Math.abs(r[4])<0.03?'good':d/Math.abs(r[4])<0.1?'':'warn');
+      return `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="num ${cls}">${f3(r[2])}</td><td class="num ${cls}">${f3(r[3])}</td><td class="num">${f3(r[4],4)}</td><td style="color:var(--muted)">${r[5]}</td></tr>`; }).join('')+'</tbody>';
+}
+function drawSweepCharts(){
+  sweepChart('cR','R','R',{y:[-0.03,1.03]});
+  sweepChart('cP','P','P',{zeroY:true});
+  sweepChart('cX','chi','χ',{zeroY:true});
+  sweepChart('cXi','xi','ξ',{zeroY:true});
+}
+function redrawAll(){
+  drawSweepCharts();
+  powChart('cPb','P',+1,EX.beta,'P');
+  powChart('cXg','chi',-1,-EX.gamma,'χ');
+  fssChart('fNu','tNu','maxdR',M.fNu,1,'1/ν',EX.nuInv,'3/4');
+  fssChart('fB','tB','P',M.fB,-1,'β/ν',EX.bn,'5/48');
+  fssChart('fG','tG','chimax',M.fG,1,'γ/ν',EX.gn,'43/24');
+  fssChart('fD','tD','M',M.fD,1,'D',EX.D,'91/48');
+  fssChart('fXi','tXi','xi',M.fXi,1,'slope',1,'');
+  nsChart(); colChart(); tables(); fracTables(); drawFractal(); drawRG(); legendChips();
+}
+
+/* ---------- refresh / scheduler ---------- */
+function refreshCurves(){
+  sweep.forEach(st=>{
+    if (!st.cnt) return; prepare(st);
+    const n=GRID.length, c={R:new Float64Array(n),P:new Float64Array(n),chi:new Float64Array(n),xi:new Float64Array(n),dR:new Float64Array(n)};
+    GRID.forEach((p,i)=>{ const q=canonAt(st,p); c.R[i]=q.R; c.P[i]=q.P; c.chi[i]=q.chi; c.xi[i]=q.xi; c.dR[i]=q.dR; });
+    st.curve=c;
+  });
+  computeFSS(); redrawAll();
+}
+let running=true, lastRefresh=0, timer=null;
+function nextSweep(){ let best=null, br=1; sweep.forEach((s,i)=>{ const t=tgt(i); if (!t) return; const r=s.cnt/t; if (r<br){br=r; best=s;} }); return best; }
+function progress(){
+  let done=0,tot=0; sweep.forEach((s,i)=>{ const t=tgt(i); done+=Math.min(s.cnt,t)*s.N; tot+=t*s.N; });
+  done+=NS.cnt*NS.L*NS.L*0.6; tot+=NS.target*NS.L*NS.L*0.6;
+  $('prog').style.width=(100*done/tot).toFixed(1)+'%';
+  const st=nextSweep();
+  const left = !!st || NS.cnt<NS.target;
+  $('stTxt').textContent = !left ? 'Done' : running ? (st ? 'Sampling lattice sizes…' : NS.cnt<NS.target ? `Counting clusters at pc (${NS.cnt}/${NS.target})` : 'Done') : 'Paused';
+}
+function work(){
+  timer=null; if (!running) return;
+  const t0=performance.now(); let did=false;
+  while (performance.now()-t0<8){
+    const st=nextSweep();
+    if (st){ nzSample(st); did=true; }
+    else if (NS.cnt<NS.target){ nsSample(); did=true; }
+    else break;
+  }
+  const now=performance.now();
+  if (did){
+    if (now-lastRefresh>600){ refreshCurves(); lastRefresh=performance.now(); } else legendChips();
+    progress(); timer=setTimeout(work,0);
+  } else { refreshCurves(); running=false; progress(); $('run').textContent='Resume'; }
+}
+function start(){ if (!running){ running=true; $('run').textContent='Pause'; } if (!timer) timer=setTimeout(work,0); progress(); }
+
+/* ---------- fractal geometry ---------- */
+const F = {L:512, cur:null, pc:null, cmp:[], timer:0};
+const PSET=[PC+0.003, PC+0.01, PC+0.02, PC+0.04];
+const HS=[1,2,3,4,6,8,11,16,22,32,45,64,90,127];
+function fAlloc(){
+  if (F.u) return; const L=F.L, N=L*L, rng=mulberry32(424248);
+  F.u=new Float32Array(N); for (let i=0;i<N;i++) F.u[i]=rng();
+  F.occ=new Uint8Array(N); F.parent=new Int32Array(N); F.size=new Int32Array(N);
+  F.sx=new Float64Array(N); F.sy=new Float64Array(N); F.sq=new Float64Array(N); F.edge=new Uint8Array(N);
+  F.pre=new Int32Array((L+1)*(L+1));
+}
+function fAnalyze(p, detail){
+  fAlloc();
+  const L=F.L, N=L*L, W=L+1, {u,occ,parent,size,sx,sy,sq,edge,pre}=F;
+  for (let i=0;i<N;i++) occ[i]=u[i]<p?1:0;
+  labelLattice(L,occ,parent,size,false);
+  sx.fill(0); sy.fill(0); sq.fill(0); edge.fill(0);
+  for (let i=0;i<N;i++){ const r=parent[i]; if (r<0) continue; const x=i%L, y=(i/L)|0; sx[r]+=x; sy[r]+=y; sq[r]+=x*x+y*y; if (x===0||y===0||x===L-1||y===L-1) edge[r]=1; }
+  let smax=0, mr=-1, S2=0, T=0;
+  for (let i=0;i<N;i++){ if (parent[i]!==i) continue; const s=size[i]; S2+=s*s; T+=s*sq[i]-sx[i]*sx[i]-sy[i]*sy[i]; if (s>smax){smax=s; mr=i;} }
+  let xi=0;
+  if (mr>=0){ const d=S2-smax*smax, cm=smax*sq[mr]-sx[mr]*sx[mr]-sy[mr]*sy[mr]; xi=d>0?Math.sqrt(Math.max(0,2*(T-cm)/d)):0; }
+  for (let y=0;y<L;y++){ let row=0; for (let x=0;x<L;x++){ row+=(parent[y*L+x]===mr)?1:0; pre[(y+1)*W+x+1]=pre[y*W+x+1]+row; } }
+  const rng=mulberry32(1234), cx=[], cy=[];
+  for (let t=0;t<60000&&cx.length<300;t++){ const x=128+((rng()*256)|0), y=128+((rng()*256)|0); if (parent[y*L+x]===mr){cx.push(x); cy.push(y);} }
+  const win=[];
+  if (cx.length>=20) for (const h of HS){
+    let m=0;
+    for (let k=0;k<cx.length;k++){ const x0=cx[k]-h, x1=cx[k]+h, y0=cy[k]-h, y1=cy[k]+h; m+=pre[(y1+1)*W+x1+1]-pre[y0*W+x1+1]-pre[(y1+1)*W+x0]+pre[y0*W+x0]; }
+    const l=2*h+1; m/=cx.length; win.push([l,m,m/(l*l)]);
+  }
+  const res={p, xi, Pinf:smax/N, win};
+  const wf=win.filter(w=>w[0]>=5&&w[0]<=65);
+  res.fWin = wf.length>=3 ? linReg(wf.map(w=>Math.log(w[0])), wf.map(w=>Math.log(w[1]))) : null;
+  if (!detail) return res;
+  const lb=Math.log(1.5), bins=new Map(), cloud=[]; let cc=0;
+  for (let i=0;i<N;i++){
+    if (parent[i]!==i || i===mr) continue; const s=size[i]; if (s<3) continue;
+    const R2=sq[i]/s-(sx[i]/s)**2-(sy[i]/s)**2; if (!(R2>0)) continue;
+    const k=Math.floor(Math.log(s)/lb); let e=bins.get(k); if (!e){ e={n:0,r2:0,ls:0}; bins.set(k,e); }
+    e.n++; e.r2+=R2; e.ls+=Math.log(s);
+    if ((cc++)%3===0 && cloud.length<3000) cloud.push([Math.sqrt(R2),s]);
+  }
+  res.gyr=[...bins.values()].filter(e=>e.n>=2).map(e=>[Math.sqrt(e.r2/e.n),Math.exp(e.ls/e.n),e.n]).sort((a,b)=>a[1]-b[1]);
+  const gf=res.gyr.filter(g=>g[1]>=10&&g[1]<=30000&&g[2]>=3);
+  res.fGyr = gf.length>=3 ? linReg(gf.map(g=>Math.log(g[0])), gf.map(g=>Math.log(g[1]))) : null;
+  res.cloud=cloud;
+  const cand=[]; for (let i=0;i<N;i++) if (parent[i]===i && i!==mr && !edge[i] && size[i]>=150) cand.push(i);
+  cand.sort((a,b)=>size[b]-size[a]);
+  const pick=cand.slice(0,6), idx=new Map(); pick.forEach((r,j)=>idx.set(r,j));
+  const dist=pick.map(()=>[]);
+  if (pick.length) for (let i=0;i<N;i++){ const r=parent[i]; if (r<0) continue; const j=idx.get(r); if (j===undefined) continue; const s=size[r]; dist[j].push(Math.max(Math.abs(i%L-sx[r]/s), Math.abs(((i/L)|0)-sy[r]/s))); }
+  res.cross=pick.map((r,j)=>{
+    const s=size[r], R=Math.sqrt(Math.max(1e-9, sq[r]/s-(sx[r]/s)**2-(sy[r]/s)**2)), d=Float64Array.from(dist[j]).sort(), pts=[];
+    for (let k=0;k<28;k++){
+      const l=2*Math.pow(4*R,k/27), t=l/2; let lo=0, hi=d.length;
+      while (lo<hi){ const m=(lo+hi)>>1; if (d[m]<=t) lo=m+1; else hi=m; }
+      if (lo>0) pts.push([l/R, lo/Math.pow(l,EX.D)]);
+    }
+    return {s,R,pts};
+  });
+  res.mask=new Uint8Array(N); for (let i=0;i<N;i++) res.mask[i]=parent[i]===mr?1:0;
+  return res;
+}
+function renderFrac(){
+  const r=F.cur; if (!r) return; const L=F.L;
+  if (!F.off){ F.off=document.createElement('canvas'); F.off.width=L; F.off.height=L; F.img=F.off.getContext('2d').createImageData(L,L); }
+  const d=F.img.data, ink=hexRgb(C.ink), bg=hexRgb(C.panel);
+  for (let i=0;i<L*L;i++){ const c=r.mask[i]?ink:bg, k=4*i; d[k]=c[0]; d[k+1]=c[1]; d[k+2]=c[2]; d[k+3]=255; }
+  F.off.getContext('2d').putImageData(F.img,0,0);
+  const z=+$('zoomSel').value, dpr=window.devicePixelRatio||1;
+  [['fA',0,L],['fZ',L-L/z,L/z]].forEach(([id,x0,w0])=>{
+    const cv=$(id), w=Math.max(1,Math.round(cv.clientWidth*dpr)); if (cv.width!==w){ cv.width=w; cv.height=w; }
+    const ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=(id==='fA'); ctx.imageSmoothingQuality='high';
+    ctx.drawImage(F.off,x0,0,w0,w0,0,0,w,w);
+    if (id==='fA'){ ctx.strokeStyle=C.accent; ctx.lineWidth=2*dpr; ctx.strokeRect(w-w/z+dpr,dpr,w/z-2*dpr,w/z-2*dpr); }
+  });
+  $('fracNote').textContent=`Fractal lattice at p = ${r.p.toFixed(4)}: the largest cluster holds ${(100*r.Pinf).toFixed(1)}% of the sites and ξ ≈ ${r.xi.toFixed(1)} sites.`;
+}
+const FCOL=()=>[C.l16,C.l32,C.l64,C.l128];
+const sw=(c,t,dash)=>`<span class="chip" style="margin-right:12px"><i class="sw" style="background:${c}${dash?';height:2px':''}"></i>${t}</span>`;
+function drawFractal(){
+  const cur=F.cur; if (!cur) return;
+  const cols=FCOL(), XT=[3,5,10,20,50,100,200];
+  const s1=[];
+  if (cur.win.length>1){
+    const a=cur.win[1];
+    s1.push({color:C.accent,pts:cur.win.map(w=>[w[0],w[1]])},{dots:true,r:3,color:C.accent,pts:cur.win.map(w=>[w[0],w[1]])},
+      {color:C.ink,dash:[6,4],width:1.2,noScale:true,pts:[3,300].map(l=>[l,a[1]*Math.pow(l/a[0],EX.D)])},
+      {color:C.muted,dash:[2,4],width:1.2,noScale:true,pts:[3,300].map(l=>[l,a[1]*Math.pow(l/a[0],2)])});
+  }
+  plot($('gM'),{x:[2.5,300],logx:true,logy:true,xticks:XT,series:s1,vlines:cur.xi>0?[{x:cur.xi,color:C.crit,dash:[4,4],label:'ξ'}]:[],xlabel:'window side ℓ',ylabel:'M(p;ℓ)'});
+  $('tM').innerHTML = cur.fWin ? `Slope for 5 ≤ ℓ ≤ 65 at p = ${cur.p.toFixed(4)}: <b>${cur.fWin.slope.toFixed(3)}</b>. At p<sub>c</sub> this is D (exact 1.8958); far above p<sub>c</sub> it approaches d = 2.` : 'The largest cluster barely reaches the middle of the lattice at this p. Move p closer to p<sub>c</sub>.';
+  const s2=[];
+  if (F.pc) s2.push({color:C.ink,width:1.6,pts:F.pc.win.map(w=>[w[0],w[2]])});
+  F.cmp.forEach((r,k)=>{ if (r) s2.push({color:cols[k],pts:r.win.map(w=>[w[0],w[2]])}); });
+  if (cur.win.length) s2.push({color:C.accent,width:2.6,pts:cur.win.map(w=>[w[0],w[2]])});
+  plot($('gP'),{x:[2.5,300],logx:true,logy:true,xticks:XT,series:s2,xlabel:'window side ℓ',ylabel:'P(p;ℓ)'});
+  $('legP').innerHTML=sw(C.ink,'p<sub>c</sub>')+PSET.map((p,k)=>sw(cols[k],'p<sub>c</sub> + '+(p-PC).toFixed(3))).join('')+sw(C.accent,'current p');
+  const s3=[{dots:true,r:1.4,alpha:0.35,color:C.muted,pts:cur.cloud||[]},{dots:true,r:4,color:C.accent,pts:(cur.gyr||[]).map(g=>[g[0],g[1]])}];
+  if (cur.fGyr && cur.gyr.length){ const r0=cur.gyr[0][0], r1=cur.gyr[cur.gyr.length-1][0]; s3.push({color:C.ink,dash:[6,4],width:1.2,pts:[r0,r1].map(R=>[R,Math.exp(cur.fGyr.icpt)*Math.pow(R,cur.fGyr.slope)])}); }
+  plot($('gR'),{logx:true,logy:true,series:s3,xlabel:'radius of gyration R_s',ylabel:'cluster size s'});
+  $('tR').innerHTML = cur.fGyr ? `Slope for clusters of 10 to 30 000 sites: D ≈ <b>${cur.fGyr.slope.toFixed(3)}</b> <span style="color:var(--muted)">exact 91/48 = 1.8958 at p<sub>c</sub></span>` : 'Too few finite clusters at this p.';
+  const pal=[C.accent,C.crit,C.l16,C.l64,C.l128,C.l32], s4=[];
+  (cur.cross||[]).forEach((c,j)=>s4.push({color:pal[j%6],pts:c.pts}));
+  if (s4.length){ const q=s4[0].pts[s4[0].pts.length-1]; if (q) s4.push({color:C.ink,dash:[6,4],width:1.2,noScale:true,pts:[1,q[0]*1.5].map(x=>[x,q[1]*Math.pow(x/q[0],-EX.D)])}); }
+  plot($('gX'),{logx:true,logy:true,series:s4,xlabel:'ℓ / R_s',ylabel:'M / ℓ^D'});
+  $('tX').innerHTML = (cur.cross&&cur.cross.length) ? `${cur.cross.length} clusters, sizes ${cur.cross.map(c=>c.s).join(', ')} sites.` : 'No large finite cluster away from the edges at this p. Try p close to p<sub>c</sub>.';
+  const s5=[]; let last=null;
+  const far=F.cmp.slice(2).filter(r=>r&&r.xi>0);
+  const xi0 = far.length ? far.reduce((a,r)=>a+r.xi*Math.pow(r.p-PC,EX.nu),0)/far.length : NaN;
+  const xiOf = r => xi0*Math.pow(r.p-PC,-EX.nu);
+  if (isFinite(xi0)) F.cmp.forEach((r,k)=>{ if (!r) return; const pts=r.win.map(w=>[w[0]/xiOf(r), w[1]/Math.pow(w[0],EX.D)]); s5.push({color:cols[k],pts}); last=pts; });
+  if (last){ const q=last[last.length-1]; s5.push({color:C.ink,dash:[6,4],width:1.2,noScale:true,pts:[1,q[0]*1.5].map(x=>[x,q[1]*Math.pow(x/q[0],2-EX.D)])}); }
+  plot($('gC'),{logx:true,logy:true,series:s5,xlabel:'ℓ / ξ',ylabel:'M / ℓ^D'});
+  $('legC').innerHTML=PSET.map((p,k)=>sw(cols[k],'p<sub>c</sub> + '+(p-PC).toFixed(3)+(F.cmp[k]&&isFinite(xi0)?` (ξ ≈ ${xiOf(F.cmp[k]).toFixed(1)})`:''))).join('')+(isFinite(xi0)?`<br><span style="color:var(--muted)">ξ = ξ<sub>0</sub>(p − p<sub>c</sub>)<sup>−ν</sup> with ν = 4/3 and ξ<sub>0</sub> = ${xi0.toFixed(3)} fitted to the two largest p, where the lattice does not cap ξ.</span>`:'');
+}
+function fracTables(){
+  const pc=F.pc;
+  const rows=[
+    ['Largest cluster mass against lattice size, M(p<sub>c</sub>) ∝ L<sup>D</sup>','size sweep',M.D],
+    ['Window mass around cluster sites, M(p<sub>c</sub>;ℓ) ∝ ℓ<sup>D</sup>','512 × 512 lattice at p<sub>c</sub>',pc&&pc.fWin?pc.fWin.slope:NaN],
+    ['Cluster size against radius of gyration, s ∝ R<sub>s</sub><sup>D</sup>','512 × 512 lattice at p<sub>c</sub>',pc&&pc.fGyr?pc.fGyr.slope:NaN],
+    ['From cluster numbers, D = d/(τ − 1)','n<sub>s</sub> at p<sub>c</sub>',2/(M.tau-1)],
+    ['From hyperscaling, D = d − β/ν','P(p<sub>c</sub>) against L',2-M.bn],
+  ];
+  $('dTable').innerHTML='<thead><tr><th>Fractal dimension D from</th><th>Data</th><th style="text-align:right">This run</th><th style="text-align:right">Exact 91/48</th></tr></thead><tbody>'+
+    rows.map(r=>`<tr><td>${r[0]}</td><td style="color:var(--muted)">${r[1]}</td><td class="num">${f3(r[2])}</td><td class="num">${EX.D.toFixed(4)}</td></tr>`).join('')+'</tbody>';
+  const fr=(a)=>a;
+  const dims=[
+    ['One dimension','1','1','1','1','0','1','1'],
+    ['Square lattice (d = 2)','2','91/48 ≈ 1.896','4/3','36/91','5/36','91/48','91/48'],
+    ['Bethe lattice (z &gt; 2)','behaves as ∞','4','1/2','1/2','1','4','d = D + β/ν = 6'],
+  ];
+  const Dw = pc&&pc.fWin ? pc.fWin.slope : NaN;
+  $('dimTable').innerHTML='<thead><tr><th>Lattice</th><th>d</th><th>D</th><th>ν</th><th>σ</th><th>β</th><th>1/(σν)</th><th>d − β/ν</th></tr></thead><tbody>'+
+    dims.map(r=>`<tr>${r.map((c,i)=>i?`<td>${fr(c)}</td>`:`<td><b>${c}</b></td>`).join('')}</tr>`).join('')+
+    `<tr><td><b>This run (d = 2)</b></td><td>2</td><td>${f3(Dw)} <span style="color:var(--muted)">windows</span></td><td>${f3(M.nu)}</td><td>${f3(1/(M.nu*Dw))} <span style="color:var(--muted)">as 1/(νD)</span></td><td>${f3(M.beta)}</td><td>–</td><td>${f3(2-M.bn)}</td></tr></tbody>`;
+}
+function fSchedule(){ clearTimeout(F.timer); F.timer=setTimeout(()=>{ F.cur=fAnalyze(V.p,true); renderFrac(); drawFractal(); },220); }
+function fInit(){
+  F.pc=fAnalyze(PC,true);
+  F.cur=Math.abs(V.p-PC)<1e-6?F.pc:fAnalyze(V.p,true);
+  renderFrac(); drawFractal(); tables();
+  let k=0; const step=()=>{ if (k<PSET.length){ F.cmp[k]=fAnalyze(PSET[k],false); k++; drawFractal(); setTimeout(step,40); } else tables(); };
+  setTimeout(step,40);
+}
+
+/* ---------- real-space renormalization ---------- */
+const SPAN3TAB=new Uint8Array(512), SPAN3=new Array(10).fill(0);
+(function(){
+  for (let m=0;m<512;m++){
+    const occ=i=>(m>>i)&1, seen=new Array(9).fill(false), st=[];
+    for (let x=0;x<3;x++) if (occ(x)){ seen[x]=true; st.push(x); }
+    let ok=false;
+    while (st.length){ const i=st.pop(), x=i%3, y=(i/3)|0; if (y===2){ ok=true; break; }
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx=x+dx, ny=y+dy; if (nx<0||nx>2||ny<0||ny>2) continue; const j=ny*3+nx; if (occ(j)&&!seen[j]){ seen[j]=true; st.push(j); } } }
+    if (ok){ SPAN3TAB[m]=1; let k=0; for (let i=0;i<9;i++) k+=occ(i); SPAN3[k]++; }
+  }
+})();
+const binom=(n,k)=>{ let r=1; for (let i=1;i<=k;i++) r=r*(n-k+i)/i; return r; };
+const RULES={
+  chain:{short:'Chain, b = 3',formula:'p³',b:3,bs:3,R:p=>p**3,pc:1,pcTxt:'1',nu:1,kind:'chain',rule:g=>g[0]&&g[1]&&g[2]},
+  tri:{short:'Triangular, b = √3',formula:'3p² − 2p³',b:Math.sqrt(3),R:p=>3*p*p-2*p**3,pc:0.5,pcTxt:'1/2',nu:4/3,kind:'none'},
+  sq2:{short:'Square, b = 2, spanning',formula:'2p² − p⁴',b:2,bs:2,R:p=>2*p*p-p**4,pc:PC,pcTxt:'0.592746',nu:4/3,kind:'sq',rule:g=>(g[0]&&g[2])||(g[1]&&g[3])},
+  sq3s:{short:'Square, b = 3, spanning',formula:'enumerated over 512 blocks',b:3,bs:3,R:p=>{ let s=0; for (let k=0;k<=9;k++) s+=SPAN3[k]*p**k*(1-p)**(9-k); return s; },pc:PC,pcTxt:'0.592746',nu:4/3,kind:'sq',rule:g=>{ let m=0; for (let i=0;i<9;i++) if (g[i]) m|=1<<i; return SPAN3TAB[m]; }},
+  sq3m:{short:'Square, b = 3, majority',formula:'Σ<sub>k≥5</sub> C(9,k) p<sup>k</sup>(1 − p)<sup>9−k</sup>',b:3,bs:3,R:p=>{ let s=0; for (let k=5;k<=9;k++) s+=binom(9,k)*p**k*(1-p)**(9-k); return s; },pc:PC,pcTxt:'0.592746',nu:4/3,kind:'sq',rule:g=>{ let s=0; for (let i=0;i<9;i++) s+=g[i]; return s>=5; }},
+};
+function fixedPoint(R){ const f=p=>R(p)-p; let lo=0.02, hi=0.98; if (f(lo)*f(hi)>0) return 1; for (let i=0;i<80;i++){ const m=(lo+hi)/2; if (f(m)<0) lo=m; else hi=m; } return (lo+hi)/2; }
+function dR(R,p){ const h=1e-5; return p>=1-h ? (R(1)-R(1-h))/h : (R(p+h)-R(p-h))/(2*h); }
+function ruleInfo(key){ const r=RULES[key]; if (r.ps===undefined){ r.ps=fixedPoint(r.R); r.slope=dR(r.R,r.ps); r.nuRG=Math.log(r.b)/Math.log(r.slope); } return r; }
+const RG={key:'sq2', p:0.618, seed:3, stages:[]};
+function rgLattice(){
+  const r=ruleInfo(RG.key); if (r.kind==='none'){ RG.stages=[]; return; }
+  const rng=mulberry32(RG.seed*7919+r.bs), p=RG.p;
+  if (r.kind==='sq'){
+    const L= r.bs===2 ? 256 : 243; let g=new Uint8Array(L*L); for (let i=0;i<L*L;i++) g[i]=rng()<p?1:0;
+    const st=[{g,L}]; let cur={g,L};
+    for (let n=1;n<5;n++){ const M=cur.L/r.bs, out=new Uint8Array(M*M), blk=new Array(r.bs*r.bs);
+      for (let Y=0;Y<M;Y++) for (let X=0;X<M;X++){ for (let dy=0;dy<r.bs;dy++) for (let dx=0;dx<r.bs;dx++) blk[dy*r.bs+dx]=cur.g[(Y*r.bs+dy)*cur.L+X*r.bs+dx]; out[Y*M+X]=r.rule(blk)?1:0; }
+      cur={g:out,L:M}; st.push(cur); }
+    st.forEach(s=>{ let k=0; for (let i=0;i<s.g.length;i++) k+=s.g[i]; s.rho=k/s.g.length; s.span=spansGrid(s.g,s.L); });
+    RG.stages=st;
+  } else {
+    const rows=48, n0=243; let g=new Uint8Array(rows*n0); for (let i=0;i<g.length;i++) g[i]=rng()<p?1:0;
+    const st=[{g,L:n0,rows}]; let cur=st[0];
+    for (let n=1;n<5;n++){ const M=cur.L/3, out=new Uint8Array(rows*M); for (let y=0;y<rows;y++) for (let X=0;X<M;X++){ const a=y*cur.L+3*X; out[y*M+X]=(cur.g[a]&&cur.g[a+1]&&cur.g[a+2])?1:0; } cur={g:out,L:M,rows}; st.push(cur); }
+    st.forEach(s=>{ let k=0; for (let i=0;i<s.g.length;i++) k+=s.g[i]; s.rho=k/s.g.length; });
+    RG.stages=st;
+  }
+}
+function spansGrid(g,L){
+  const parent=new Int32Array(L*L), size=new Int32Array(L*L); labelLattice(L,g,parent,size,false);
+  const top=new Set(); for (let x=0;x<L;x++) if (parent[x]>=0) top.add(parent[x]);
+  for (let x=0;x<L;x++){ const r=parent[(L-1)*L+x]; if (r>=0 && top.has(r)) return true; } return false;
+}
+function renderStages(){
+  const box=$('rgStages'), r=ruleInfo(RG.key);
+  if (r.kind==='none'){ box.innerHTML=''; $('rgStageNote').textContent='Pictures are drawn for the chain and the square-lattice rules. For the triangular rule use the map and flow panels.'; return; }
+  if (box.children.length!==5){ box.innerHTML=[0,1,2,3,4].map(n=>`<div><canvas></canvas><span class="stlab"></span></div>`).join(''); }
+  const ink=hexRgb(C.ink), bg=hexRgb(C.panel), gap=hexRgb(C.grid), dpr=window.devicePixelRatio||1;
+  RG.stages.forEach((s,n)=>{
+    const wrap=box.children[n], cv=wrap.querySelector('canvas'), w=Math.max(1,Math.round(cv.clientWidth*dpr)); if (cv.width!==w){ cv.width=w; cv.height=w; }
+    const ctx=cv.getContext('2d'), off=document.createElement('canvas');
+    if (r.kind==='sq'){
+      off.width=s.L; off.height=s.L; const oc=off.getContext('2d'), im=oc.createImageData(s.L,s.L);
+      for (let i=0;i<s.g.length;i++){ const c=s.g[i]?ink:bg, k=4*i; im.data[k]=c[0]; im.data[k+1]=c[1]; im.data[k+2]=c[2]; im.data[k+3]=255; }
+      oc.putImageData(im,0,0); ctx.imageSmoothingEnabled = s.L>w; ctx.drawImage(off,0,0,w,w);
+      if (s.L<=32){ ctx.strokeStyle=C.rule; ctx.lineWidth=1; const c=w/s.L; ctx.beginPath(); for (let k=1;k<s.L;k++){ ctx.moveTo(Math.round(k*c)+.5,0); ctx.lineTo(Math.round(k*c)+.5,w); ctx.moveTo(0,Math.round(k*c)+.5); ctx.lineTo(w,Math.round(k*c)+.5); } ctx.stroke(); }
+      wrap.querySelector('.stlab').textContent=`${s.L} × ${s.L}${n?`, block side ${r.bs**n}`:', original'}`;
+    } else {
+      ctx.fillStyle=C.panel; ctx.fillRect(0,0,w,w);
+      const rows=s.rows, rh=w/rows, cw=w/s.L;
+      for (let y=0;y<rows;y++) for (let x=0;x<s.L;x++){ ctx.fillStyle=s.g[y*s.L+x]?C.ink:C.grid; const x0=Math.floor(x*cw), x1=Math.floor((x+1)*cw)-(s.L<=27?1:0); ctx.fillRect(x0,Math.floor(y*rh),Math.max(1,x1-x0),Math.max(1,Math.floor(rh*0.7))); }
+      wrap.querySelector('.stlab').textContent=`${rows} chains of ${s.L}`;
+    }
+  });
+  $('rgStageNote').textContent = r.kind==='sq' ? 'Open boundaries; spanning is checked from the top edge to the bottom edge of each stage.' : 'Each row is an independent chain; a block of three becomes occupied only if all three sites are.';
+}
+function rgTables(){
+  const r=ruleInfo(RG.key);
+  let pn=RG.p; const rows=[];
+  for (let n=0;n<5;n++){ const s=RG.stages[n]; rows.push(`<tr><td>${n}</td><td>${s? (r.kind==='sq'? s.L+' × '+s.L : s.rows+' × '+s.L) : '–'}</td><td class="num">${f3(pn,4)}</td><td class="num">${s?f3(s.rho,4):'–'}</td><td>${s&&r.kind==='sq'?(s.span?'yes':'no'):'–'}</td></tr>`); pn=r.R(pn); }
+  $('rgStageTable').innerHTML=`<thead><tr><th>RG step n</th><th>Lattice</th><th style="text-align:right">R<sub>b</sub><sup>n</sup>(p)</th><th style="text-align:right">Measured density</th><th>Spans top to bottom</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  $('rgTable').innerHTML='<thead><tr><th>Lattice and rule</th><th>R<sub>b</sub>(p)</th><th style="text-align:right">b</th><th style="text-align:right">p*</th><th style="text-align:right">exact p<sub>c</sub></th><th style="text-align:right">R<sub>b</sub>′(p*)</th><th style="text-align:right">ν ≈ log b / log R<sub>b</sub>′(p*)</th><th style="text-align:right">exact ν</th></tr></thead><tbody>'+
+    Object.keys(RULES).map(k=>{ const q=ruleInfo(k); return `<tr${k===RG.key?' style="background:var(--grid)"':''}><td><b>${q.short}</b></td><td>${q.formula}</td><td class="num">${f3(q.b,3)}</td><td class="num">${f3(q.ps,4)}</td><td class="num">${q.pcTxt}</td><td class="num">${f3(q.slope,4)}</td><td class="num">${f3(q.nuRG,4)}</td><td class="num">${q.nu===1?'1':'4/3'}</td></tr>`; }).join('')+'</tbody>';
+  const mc=rgMC();
+  $('rgMCTable').innerHTML='<thead><tr><th>Block side b = L</th><th style="text-align:right">p*<sub>L</sub> from R<sub>L</sub>(p*) = p*</th><th style="text-align:right">R<sub>L</sub>′(p*<sub>L</sub>)</th><th style="text-align:right">ν ≈ log L / log R<sub>L</sub>′(p*<sub>L</sub>)</th><th style="text-align:right">ν from this L and the previous one</th></tr></thead><tbody>'+
+    (mc.length? mc.map(m=>`<tr><td>${m.L}</td><td class="num">${f3(m.ps,4)}</td><td class="num">${f3(m.slope,3)}</td><td class="num">${f3(m.nu,3)}</td><td class="num">${f3(m.nuPair,3)}</td></tr>`).join('') : '<tr><td colspan="5">Waiting for the size sweep.</td></tr>')+
+    `<tr><td><b>Exact</b></td><td class="num">0.5927</td><td class="num">–</td><td class="num">1.333</td><td class="num">1.333</td></tr></tbody>`;
+}
+function rgMC(){
+  const out=[]; let prev=null;
+  sweep.forEach(s=>{
+    if (!s.curve || s.cnt<4) return;
+    const c=s.curve; let ps=NaN;
+    for (let i=1;i<GRID.length;i++){ const a=c.R[i-1]-GRID[i-1], b=c.R[i]-GRID[i]; if (GRID[i]>0.5 && a<0 && b>=0){ ps=GRID[i-1]+(-a)/(b-a)*PSTEP; break; } }
+    if (!isFinite(ps)) return;
+    const q=canonAt(s,ps), qc=canonAt(s,PC);
+    const m={L:s.L, ps, slope:q.dR, nu:Math.log(s.L)/Math.log(q.dR), dRc:qc.dR, nuPair:NaN};
+    if (prev) m.nuPair=Math.log(s.L/prev.L)/Math.log(m.dRc/prev.dRc);
+    out.push(m); prev=m;
+  });
+  return out;
+}
+function drawRG(){
+  const r=ruleInfo(RG.key), R=r.R;
+  const curve=[]; for (let i=0;i<=200;i++){ const p=i/200; curve.push([p,R(p)]); }
+  const cob=[]; let p=RG.p; cob.push([p,0]);
+  for (let k=0;k<16;k++){ const q=R(p); cob.push([p,q],[q,q]); p=q; }
+  const fp=[[0,0],[1,1]]; if (r.ps<1) fp.push([r.ps,r.ps]);
+  plot($('rgMap'),{x:[0,1],y:[0,1],series:[
+    {color:C.muted,dash:[5,4],width:1.2,pts:[[0,0],[1,1]]},
+    {color:C.ink,width:2,pts:curve},
+    {color:C.crit,width:1.3,pts:cob},
+    {dots:true,r:5,color:C.accent,pts:fp}],xlabel:'p',ylabel:'R_b(p)'});
+  drawFlow(r);
+  const it=[]; p=RG.p; for (let k=0;k<6;k++){ it.push(p.toFixed(3)); p=R(p); }
+  const xiLine = RG.key==='chain' ? `<dt>ξ = −1/ln p along the flow</dt><dd>${(()=>{ let q=RG.p, a=[]; for (let k=0;k<4;k++){ a.push(q>0&&q<1?(-1/Math.log(q)).toFixed(2):(q>=1?'∞':'0')); q=R(q); } return a.join(' → '); })()}</dd>` : '';
+  $('rgRead').innerHTML=`<dt>Scale factor b</dt><dd>${f3(r.b,3)}</dd><dt>Nontrivial fixed point p*</dt><dd>${f3(r.ps,4)}</dd><dt>Exact p<sub>c</sub></dt><dd>${r.pcTxt}</dd><dt>R<sub>b</sub>′(p*)</dt><dd>${f3(r.slope,4)}</dd><dt>ν ≈ log b / log R<sub>b</sub>′(p*)</dt><dd>${f3(r.nuRG,4)}</dd><dt>Exact ν</dt><dd>${r.nu===1?'1':'4/3 ≈ 1.3333'}</dd><dt>p, R(p), R(R(p)), …</dt><dd style="font-weight:500">${it.join(' → ')}</dd>${xiLine}`;
+  const ser=[{color:C.muted,dash:[5,4],width:1.2,pts:[[0.5,0.5],[0.7,0.7]]}], dots=[];
+  sweep.filter(s=>s.curve).forEach(s=>ser.push({color:LCOL(s.L),pts:GRID.map((q,i)=>[q,s.curve.R[i]])}));
+  rgMC().forEach(m=>dots.push({dots:true,r:5,color:LCOL(m.L),pts:[[m.ps,m.ps]]}));
+  plot($('rgMC'),{x:[0.5,0.7],y:[0,1],series:ser.concat(dots),vlines:[{x:PC,color:C.crit,dash:[4,4],label:'pc'}],xlabel:'p',ylabel:'R_L(p)'});
+  rgTables();
+}
+function drawFlow(r){
+  const cv=$('rgFlow'), dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight; if (!W) return;
+  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  const x0=24, x1=W-24, y=H/2-6, X=p=>x0+p*(x1-x0);
+  ctx.strokeStyle=C.ink; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+  ctx.fillStyle=C.ink;
+  for (let i=1;i<24;i++){ const p=i/24; if (Math.abs(p-r.ps)<0.03) continue; const dir=Math.sign(r.R(p)-p); if (!dir) continue; const px=X(p); ctx.beginPath(); ctx.moveTo(px+5*dir,y); ctx.lineTo(px-4*dir,y-5); ctx.lineTo(px-4*dir,y+5); ctx.closePath(); ctx.fill(); }
+  const pts=[[0,false,'0'],[1,r.ps>=1,'1']]; if (r.ps<1) pts.push([r.ps,true,'p* = '+r.ps.toFixed(3)]);
+  ctx.font='12px "Public Sans", system-ui, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='top';
+  pts.forEach(([p,unst,lab])=>{ const px=X(p); ctx.beginPath(); ctx.arc(px,y,6,0,7); if (unst){ ctx.fillStyle=C.panel; ctx.fill(); ctx.strokeStyle=C.crit; ctx.lineWidth=2; ctx.stroke(); } else { ctx.fillStyle=C.accent; ctx.fill(); } ctx.fillStyle=C.muted; ctx.fillText(lab,Math.min(Math.max(px,20),W-30),y+12); });
+  let p=RG.p; for (let k=0;k<6;k++){ ctx.globalAlpha=1-k*0.14; ctx.fillStyle=C.crit; ctx.beginPath(); ctx.arc(X(p),y-14,3.5,0,7); ctx.fill(); p=r.R(p); } ctx.globalAlpha=1;
+}
+let rgRaf=0;
+function rgUpdate(full){
+  $('rgP').value=RG.p; $('rgPOut').textContent=RG.p.toFixed(3);
+  if (rgRaf) return;
+  rgRaf=requestAnimationFrame(()=>{ rgRaf=0; rgLattice(); renderStages(); drawRG(); });
+}
+function rgSet(p){ RG.p=Math.min(1,Math.max(0,+(+p).toFixed(3))); rgUpdate(); }
+
+/* ---------- wiring ---------- */
+let rafV=0;
+function setP(p){
+  V.p=Math.min(1,Math.max(0,p)); $('p').value=V.p; $('pOut').textContent=V.p.toFixed(4);
+  if (!rafV) rafV=requestAnimationFrame(()=>{ rafV=0; updateView(); drawSweepCharts(); fSchedule(); });
+}
+$('p').addEventListener('input',e=>setP(+e.target.value));
+$('up').onclick=()=>setP(V.p+0.005);
+$('dn').onclick=()=>setP(V.p-0.005);
+$('toPc').onclick=()=>setP(PC);
+$('seed').onclick=()=>{ V.seed++; genView(); updateView(); };
+$('Lsel').onchange=e=>{ V.L=+e.target.value; genView(); updateView(); };
+document.querySelectorAll('input[name=vm]').forEach(r=>r.onchange=e=>{ V.mode=e.target.value; renderLattice(); });
+document.querySelectorAll('input[name=pe]').forEach(r=>r.onchange=()=>{ computeFSS(); redrawAll(); });
+['cR','cP','cX','cXi'].forEach(id=>$(id).addEventListener('click',e=>{ const cv=e.currentTarget; if (!cv._inv) return; const r=cv.getBoundingClientRect(); setP(Math.round(cv._inv(e.clientX-r.left)*2000)/2000); }));
+$('run').onclick=()=>{ if (running){ running=false; $('run').textContent='Resume'; progress(); } else start(); };
+$('add256').onclick=e=>{ use256=true; e.currentTarget.disabled=true; e.currentTarget.textContent='L = 256 included'; start(); };
+$('more').onclick=()=>{ targetMul*=2; NS.target*=2; start(); };
+$('restart').onclick=()=>{
+  sweep.forEach(s=>{ s.cnt=0; if (s.alloc){ s.sumP.fill(0); s.sumChi.fill(0); s.sumXi.fill(0); s.spanHist.fill(0); } s.curve=null; });
+  NS.cnt=0; NS.bins.fill(0); targetMul=1; NS.target=40; Object.keys(M).forEach(k=>delete M[k]); redrawAll(); start();
+};
+const COLA={R:0,P:EX.bn,chi:-EX.gn,xi:-1};
+const COLM=()=>({R:0,P:M.bn,chi:-M.gn,xi:-M.xiS});
+function setCol(pc,ni,a){ $('sPc').value=pc; $('sNu').value=ni; $('sA').value=a; syncCol(); }
+function syncCol(){ $('oPc').textContent=(+$('sPc').value).toFixed(4); $('oNu').textContent=(+$('sNu').value).toFixed(3); $('oA').textContent=(+$('sA').value).toFixed(3); colChart(); }
+['sPc','sNu','sA'].forEach(id=>$(id).addEventListener('input',syncCol));
+$('colQ').onchange=()=>{ $('sA').value=COLA[$('colQ').value]; syncCol(); };
+$('colExact').onclick=()=>setCol(PC,EX.nuInv,COLA[$('colQ').value]);
+$('colMeas').onclick=()=>{ const a=COLM()[$('colQ').value]; setCol(isFinite(M.pcEst)?M.pcEst:PC, isFinite(M.nuInv)?M.nuInv:EX.nuInv, isFinite(a)?a:0); };
+
+let rz=0;
+const ro=new ResizeObserver(()=>{ if (rz) return; rz=requestAnimationFrame(()=>{ rz=0; renderLattice(); renderFrac(); renderStages(); redrawAll(); }); });
+document.querySelectorAll('figure, .plate').forEach(el=>ro.observe(el));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ readColors(); buildPalette(); updateView(); renderFrac(); renderStages(); redrawAll(); });
+
+readColors(); buildPalette(); genView(); setCol(PC,EX.nuInv,COLA.P);
+$('rgRule').onchange=e=>{ RG.key=e.target.value; RG.p=+ruleInfo(RG.key).ps.toFixed(3); rgUpdate(); };
+$('rgP').addEventListener('input',e=>rgSet(e.target.value));
+$('rgLo').onclick=()=>rgSet(ruleInfo(RG.key).ps-0.03);
+$('rgHi').onclick=()=>rgSet(Math.min(1,ruleInfo(RG.key).ps+0.03));
+$('rgFix').onclick=()=>rgSet(ruleInfo(RG.key).ps);
+$('rgPc').onclick=()=>rgSet(ruleInfo(RG.key).pc);
+$('rgSeed').onclick=()=>{ RG.seed++; rgUpdate(); };
+RG.p=+ruleInfo(RG.key).ps.toFixed(3); rgLattice(); renderStages();
+V.p=0.5927; updateView(); redrawAll(); rgUpdate(); setTimeout(()=>{ fInit(); start(); }, 400);
+$('zoomSel').onchange=renderFrac;
+})();
+</script>
+</body>
+</html>
