@@ -114,6 +114,12 @@ tr:last-child td{border-bottom:0}
 ol.refs{max-width:80ch; padding-left:1.4em; font-size:14.5px; line-height:1.55}
 ol.refs li{margin-bottom:8px}
 footer{margin-top:48px; font-size:13px; color:var(--muted); max-width:80ch}
+
+.rad{white-space:nowrap}
+.rad .rs{display:inline-block; transform:scale(1.05,1.22); transform-origin:100% 85%; margin-right:-0.05em}
+.rad .rc{display:inline-block; border-top:0.075em solid currentColor; padding:0.04em 0.12em 0 0.1em; line-height:1.1}
+.ss{display:inline-flex; flex-direction:column; vertical-align:0.5em; line-height:1; font-size:0.72em; margin-left:0.04em; margin-right:0.04em}
+.ss sup,.ss sub{font-size:1em; vertical-align:baseline; line-height:1.02; position:static}
 </style>
 </head>
 <body>
@@ -251,7 +257,7 @@ footer{margin-top:48px; font-size:13px; color:var(--muted); max-width:80ch}
       <span class="row" style="margin-top:6px"><label for="zoomSel" style="font-size:13px">Enlargement</label><select id="zoomSel"><option value="2" selected>× 2 (a quarter of the area)</option><option value="4">× 4 (a sixteenth of the area)</option></select></span></figcaption><canvas id="fZ" aria-label="Enlarged corner of the largest cluster"></canvas></figure>
     <figure><figcaption><b>Mass in a window: M(p;ℓ) ∝ ℓ<sup>D</sup></b>Averaged over 300 windows centered on sites of the largest cluster. Dashed: slope D = 91/48. Dotted: slope d = 2. The red line marks ξ at the current p.</figcaption><canvas id="gM"></canvas><p class="fit" id="tM"></p></figure>
     <figure><figcaption><b>Density against window size: P(p;ℓ) = M/ℓ<sup>2</sup></b>At p<sub>c</sub> it falls as ℓ<sup>D−d</sup> forever. Above p<sub>c</sub> it falls only until ℓ ≈ ξ, then levels off at P<sub>∞</sub>(p): the shorter length scale wins.</figcaption><canvas id="gP"></canvas><p class="fit" id="legP"></p></figure>
-    <figure><figcaption><b>Size against radius of gyration: s ∝ R<sub>s</sub><sup>D</sup></b>Gray: individual finite clusters at the current p. Blue: R<sub>s</sub> = √⟨R²(s)⟩ averaged over clusters of similar size.</figcaption><canvas id="gR"></canvas><p class="fit" id="tR"></p></figure>
+    <figure><figcaption><b>Size against radius of gyration: s ∝ R<span class="ss"><sup>D</sup><sub>s</sub></span></b>Gray: individual finite clusters at the current p. Blue: R<sub>s</sub> = <span class="rad"><span class="rs">√</span><span class="rc">⟨R²(s)⟩</span></span> averaged over clusters of similar size.</figcaption><canvas id="gR"></canvas><p class="fit" id="tR"></p></figure>
     <figure><figcaption><b>Crossover for single clusters: M(s;ℓ)/ℓ<sup>D</sup> = m(ℓ/R<sub>s</sub>)</b>Windows centered on the center of mass of the largest finite clusters away from the edges. Flat for ℓ ≪ R<sub>s</sub>, slope −D (dashed) once the whole cluster fits inside.</figcaption><canvas id="gX"></canvas><p class="fit" id="tX"></p></figure>
     <figure><figcaption><b>Scaling function above p<sub>c</sub>: M<sub>∞</sub>(ξ;ℓ)/ℓ<sup>D</sup> = m<sub>∞</sub>(ℓ/ξ)</b>The curves for several p above p<sub>c</sub> share one shape once ℓ is measured in units of ξ: constant for ℓ ≪ ξ, slope d − D (dashed) for ℓ ≫ ξ.</figcaption><canvas id="gC"></canvas><p class="fit" id="legC"></p></figure>
   </div>
@@ -554,6 +560,22 @@ function computeFSS(){
   M.nu = 1/M.nuInv; M.beta=M.bn*M.nu; M.gamma=M.gn*M.nu; M.alpha=2-2*M.nu; M.eta=2-M.gn; M.delta=1+M.gamma/M.beta; M.sigma=1/(M.nu*M.D);
 }
 
+function richParts(s){ const out=[]; let i=0, buf=''; const push=(t,m)=>{ if (t) out.push({t,m}); };
+  while (i<s.length){ const ch=s[i];
+    if ((ch==='_'||ch==='^') && i+1<s.length){ push(buf,0); buf=''; const m=ch==='_'?1:2; let t;
+      if (s[i+1]==='{'){ const j=s.indexOf('}',i+2); t=s.slice(i+2,j<0?s.length:j); i=j<0?s.length:j+1; }
+      else { t=String.fromCodePoint(s.codePointAt(i+1)); i+=1+t.length; }
+      push(t,m); }
+    else { buf+=ch; i++; } }
+  push(buf,0); return out; }
+function drawRich(ctx,s,x,y){
+  const parts=richParts(String(s)); if (parts.length===1 && parts[0].m===0){ ctx.fillText(s,x,y); return; }
+  const font=ctx.font, mm=font.match(/(\d+(?:\.\d+)?)px/), px=mm?+mm[1]:11, small=font.replace(/(\d+(?:\.\d+)?)px/,(px*0.72).toFixed(1)+'px'), al=ctx.textAlign;
+  let w=0; parts.forEach(p=>{ ctx.font=p.m?small:font; p.w=ctx.measureText(p.t).width; w+=p.w; });
+  let x0= al==='center' ? x-w/2 : (al==='right'||al==='end') ? x-w : x;
+  ctx.textAlign='left';
+  parts.forEach(p=>{ ctx.font=p.m?small:font; ctx.fillText(p.t,x0,y+(p.m===1?px*0.32:p.m===2?-px*0.38:0)); x0+=p.w; });
+  ctx.textAlign=al; ctx.font=font; }
 /* ---------- plotting ---------- */
 const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
 const supNum = n => String(n).split('').map(c=>SUP[c]||c).join('');
@@ -605,7 +627,7 @@ function plot(cv,o){
   ticks(y0,y1,o.logy).forEach(([v,l])=>{ const py=Math.round(Y(v))+.5; ctx.beginPath(); ctx.moveTo(m.l,py); ctx.lineTo(m.l+pw,py); ctx.stroke(); ctx.fillText(l,m.l-6,py); });
   ctx.strokeStyle=C.rule; ctx.strokeRect(m.l+.5,m.t+.5,pw-1,ph-1);
   ctx.save(); ctx.beginPath(); ctx.rect(m.l,m.t,pw,ph); ctx.clip();
-  (o.vlines||[]).forEach(v=>{ if (v.x<x0||v.x>x1) return; ctx.strokeStyle=v.color; ctx.lineWidth=v.width||1; ctx.setLineDash(v.dash||[]); const px=X(v.x); ctx.beginPath(); ctx.moveTo(px,m.t); ctx.lineTo(px,m.t+ph); ctx.stroke(); ctx.setLineDash([]); if (v.label){ ctx.fillStyle=v.color; ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText(v.label,px+4,m.t+4); } });
+  (o.vlines||[]).forEach(v=>{ if (v.x<x0||v.x>x1) return; ctx.strokeStyle=v.color; ctx.lineWidth=v.width||1; ctx.setLineDash(v.dash||[]); const px=X(v.x); ctx.beginPath(); ctx.moveTo(px,m.t); ctx.lineTo(px,m.t+ph); ctx.stroke(); ctx.setLineDash([]); if (v.label){ ctx.fillStyle=v.color; ctx.textAlign='left'; ctx.textBaseline='top'; drawRich(ctx,v.label,px+4,m.t+4); } });
   series.forEach(s=>{
     ctx.strokeStyle=s.color; ctx.fillStyle=s.color; ctx.lineWidth=s.width||1.6; ctx.setLineDash(s.dash||[]); ctx.globalAlpha=s.alpha||1;
     if (s.dots){ s.pts.forEach(p=>{ if (!isFinite(p[1])||(o.logy&&p[1]<=0)) return; ctx.beginPath(); ctx.arc(X(p[0]),Y(p[1]),s.r||4,0,7); ctx.fill(); }); }
@@ -614,12 +636,12 @@ function plot(cv,o){
   });
   ctx.restore();
   ctx.fillStyle=C.muted; ctx.textAlign='center'; ctx.textBaseline='bottom';
-  if (o.xlabel) ctx.fillText(o.xlabel, m.l+pw/2, H-1);
-  if (o.ylabel){ ctx.save(); ctx.translate(11,m.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textBaseline='middle'; ctx.fillText(o.ylabel,0,0); ctx.restore(); }
+  if (o.xlabel) drawRich(ctx,o.xlabel, m.l+pw/2, H-1);
+  if (o.ylabel){ ctx.save(); ctx.translate(11,m.t+ph/2); ctx.rotate(-Math.PI/2); ctx.textBaseline='middle'; drawRich(ctx,o.ylabel,0,0); ctx.restore(); }
 }
 
 /* ---------- charts ---------- */
-const PV = () => [{x:V.p,color:C.accent,width:1.5},{x:PC,color:C.crit,dash:[4,4],label:'pc'}];
+const PV = () => [{x:V.p,color:C.accent,width:1.5},{x:PC,color:C.crit,dash:[4,4],label:'p_c'}];
 function sweepChart(id,key,ylabel,opt={}){
   const ser=sweep.filter(s=>s.curve).map(s=>({color:LCOL(s.L),pts:GRID.map((p,i)=>[p,s.curve[key][i]])}));
   plot($(id),Object.assign({x:[0.46,0.74],series:ser,vlines:PV(),xlabel:'p',ylabel},opt));
@@ -632,7 +654,7 @@ function powChart(id,key,side,slope,ylabel){
     if (s.L===256 || !ref){ const q=pts.reduce((b,p)=>Math.abs(p[0]-0.08)<Math.abs(b[0]-0.08)?p:b,pts[0]); ref=q; }
   });
   if (ref){ const A=ref[1]/Math.pow(ref[0],slope); ser.push({color:C.ink,dash:[6,4],width:1.3,noScale:true,pts:[0.001,0.003,0.01,0.03,0.1,0.2].map(x=>[x,A*Math.pow(x,slope)])}); }
-  plot($(id),{x:[0.001,0.2],logx:true,logy:true,series:ser,xlabel:side>0?'p − pc':'pc − p',ylabel});
+  plot($(id),{x:[0.001,0.2],logx:true,logy:true,series:ser,xlabel:side>0?'p − p_c':'p_c − p',ylabel});
 }
 const LT=[16,32,64,128,256];
 function fssChart(id,tid,key,fit,sign,name,exact,exLabel){
@@ -640,7 +662,7 @@ function fssChart(id,tid,key,fit,sign,name,exact,exLabel){
   const ser=[{dots:true,color:C.ink,pts:[]}];
   rows.forEach(r=>ser.push({dots:true,r:5,color:LCOL(r.L),pts:[[r.L,r[key]]]}));
   if (fit) ser.push({color:C.ink,dash:[6,4],width:1.2,pts:[12,340].map(L=>[L,Math.exp(fit.icpt+fit.slope*Math.log(L))])});
-  plot($(id),{x:[12,340],logx:true,logy:true,xticks:LT,series:ser,xlabel:'L',ylabel:key==='maxdR'?'max dR/dp':key==='chimax'?'χ max':key});
+  plot($(id),{x:[12,340],logx:true,logy:true,xticks:LT,series:ser,xlabel:'L',ylabel:key==='maxdR'?'max dR/dp':key==='chimax'?'χ_{max}':key});
   const t=$(tid);
   if (!fit){ t.textContent='Waiting for at least two lattice sizes.'; return; }
   const v=sign*fit.slope, se=isFinite(fit.se)?' ± '+fit.se.toFixed(3):'';
@@ -656,8 +678,8 @@ function colChart(){
   const q=$('colQ').value, pc=+$('sPc').value, ni=+$('sNu').value, a=+$('sA').value;
   const ser=sweep.filter(s=>s.curve).map(s=>{ const f=Math.pow(s.L,ni), g=Math.pow(s.L,a); return {color:LCOL(s.L),pts:GRID.map((p,i)=>[(p-pc)*f, s.curve[q][i]*g])}; });
   const names={R:'R',P:'P',chi:'χ',xi:'ξ'};
-  $('colTitle').textContent=`L^a · ${names[q]} against (p − pc) L^(1/ν)`;
-  plot($('cCol'),{x:[-4,4],series:ser,xlabel:'(p − pc) · L^(1/ν)',ylabel:`L^a · ${names[q]}`});
+  $('colTitle').innerHTML=`L<sup>a</sup> · ${names[q]} against (p − p<sub>c</sub>) L<sup>1/ν</sup>`;
+  plot($('cCol'),{x:[-4,4],series:ser,xlabel:'(p − p_c) · L^{1/ν}',ylabel:`L^a · ${names[q]}`});
 }
 function legendChips(){
   $('chips').innerHTML=sweep.map((s,i)=>(!tgt(i)&&!s.cnt)?'':`<span class="chip"><i class="sw" style="background:${LCOL(s.L)}"></i>L = ${s.L} <span style="color:var(--muted)">${s.cnt}/${tgt(i)||s.cnt}</span></span>`).join('');
@@ -730,7 +752,7 @@ function progress(){
   $('prog').style.width=(100*done/tot).toFixed(1)+'%';
   const st=nextSweep();
   const left = !!st || NS.cnt<NS.target;
-  $('stTxt').textContent = !left ? 'Done' : running ? (st ? 'Sampling lattice sizes…' : NS.cnt<NS.target ? `Counting clusters at pc (${NS.cnt}/${NS.target})` : 'Done') : 'Paused';
+  $('stTxt').textContent = !left ? 'Done' : running ? (st ? 'Sampling lattice sizes…' : NS.cnt<NS.target ? `Counting clusters at the critical point (${NS.cnt}/${NS.target})` : 'Done') : 'Paused';
 }
 function work(){
   timer=null; if (!running) return;
@@ -871,7 +893,7 @@ function fracTables(){
   const rows=[
     ['Largest cluster mass against lattice size, M(p<sub>c</sub>) ∝ L<sup>D</sup>','size sweep',M.D],
     ['Window mass around cluster sites, M(p<sub>c</sub>;ℓ) ∝ ℓ<sup>D</sup>','512 × 512 lattice at p<sub>c</sub>',pc&&pc.fWin?pc.fWin.slope:NaN],
-    ['Cluster size against radius of gyration, s ∝ R<sub>s</sub><sup>D</sup>','512 × 512 lattice at p<sub>c</sub>',pc&&pc.fGyr?pc.fGyr.slope:NaN],
+    ['Cluster size against radius of gyration, s ∝ R<span class="ss"><sup>D</sup><sub>s</sub></span>','512 × 512 lattice at p<sub>c</sub>',pc&&pc.fGyr?pc.fGyr.slope:NaN],
     ['From cluster numbers, D = d/(τ − 1)','n<sub>s</sub> at p<sub>c</sub>',2/(M.tau-1)],
     ['From hyperscaling, D = d − β/ν','P(p<sub>c</sub>) against L',2-M.bn],
   ];
@@ -912,7 +934,7 @@ const SPAN3TAB=new Uint8Array(512), SPAN3=new Array(10).fill(0);
 const binom=(n,k)=>{ let r=1; for (let i=1;i<=k;i++) r=r*(n-k+i)/i; return r; };
 const RULES={
   chain:{short:'Chain, b = 3',formula:'p³',b:3,bs:3,R:p=>p**3,pc:1,pcTxt:'1',nu:1,kind:'chain',rule:g=>g[0]&&g[1]&&g[2]},
-  tri:{short:'Triangular, b = √3',formula:'3p² − 2p³',b:Math.sqrt(3),R:p=>3*p*p-2*p**3,pc:0.5,pcTxt:'1/2',nu:4/3,kind:'none'},
+  tri:{short:'Triangular, b = <span class="rad"><span class="rs">√</span><span class="rc">3</span></span>',formula:'3p² − 2p³',b:Math.sqrt(3),R:p=>3*p*p-2*p**3,pc:0.5,pcTxt:'1/2',nu:4/3,kind:'none'},
   sq2:{short:'Square, b = 2, spanning',formula:'2p² − p⁴',b:2,bs:2,R:p=>2*p*p-p**4,pc:PC,pcTxt:'0.592746',nu:4/3,kind:'sq',rule:g=>(g[0]&&g[2])||(g[1]&&g[3])},
   sq3s:{short:'Square, b = 3, spanning',formula:'enumerated over 512 blocks',b:3,bs:3,R:p=>{ let s=0; for (let k=0;k<=9;k++) s+=SPAN3[k]*p**k*(1-p)**(9-k); return s; },pc:PC,pcTxt:'0.592746',nu:4/3,kind:'sq',rule:g=>{ let m=0; for (let i=0;i<9;i++) if (g[i]) m|=1<<i; return SPAN3TAB[m]; }},
   sq3m:{short:'Square, b = 3, majority',formula:'Σ<sub>k≥5</sub> C(9,k) p<sup>k</sup>(1 − p)<sup>9−k</sup>',b:3,bs:3,R:p=>{ let s=0; for (let k=5;k<=9;k++) s+=binom(9,k)*p**k*(1-p)**(9-k); return s; },pc:PC,pcTxt:'0.592746',nu:4/3,kind:'sq',rule:g=>{ let s=0; for (let i=0;i<9;i++) s+=g[i]; return s>=5; }},
@@ -972,7 +994,7 @@ function rgTables(){
   const r=ruleInfo(RG.key);
   let pn=RG.p; const rows=[];
   for (let n=0;n<5;n++){ const s=RG.stages[n]; rows.push(`<tr><td>${n}</td><td>${s? (r.kind==='sq'? s.L+' × '+s.L : s.rows+' × '+s.L) : '–'}</td><td class="num">${f3(pn,4)}</td><td class="num">${s?f3(s.rho,4):'–'}</td><td>${s&&r.kind==='sq'?(s.span?'yes':'no'):'–'}</td></tr>`); pn=r.R(pn); }
-  $('rgStageTable').innerHTML=`<thead><tr><th>RG step n</th><th>Lattice</th><th style="text-align:right">R<sub>b</sub><sup>n</sup>(p)</th><th style="text-align:right">Measured density</th><th>Spans top to bottom</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  $('rgStageTable').innerHTML=`<thead><tr><th>RG step n</th><th>Lattice</th><th style="text-align:right">R<span class="ss"><sup>n</sup><sub>b</sub></span>(p)</th><th style="text-align:right">Measured density</th><th>Spans top to bottom</th></tr></thead><tbody>${rows.join('')}</tbody>`;
   $('rgTable').innerHTML='<thead><tr><th>Lattice and rule</th><th>R<sub>b</sub>(p)</th><th style="text-align:right">b</th><th style="text-align:right">p*</th><th style="text-align:right">exact p<sub>c</sub></th><th style="text-align:right">R<sub>b</sub>′(p*)</th><th style="text-align:right">ν ≈ log b / log R<sub>b</sub>′(p*)</th><th style="text-align:right">exact ν</th></tr></thead><tbody>'+
     Object.keys(RULES).map(k=>{ const q=ruleInfo(k); return `<tr${k===RG.key?' style="background:var(--grid)"':''}><td><b>${q.short}</b></td><td>${q.formula}</td><td class="num">${f3(q.b,3)}</td><td class="num">${f3(q.ps,4)}</td><td class="num">${q.pcTxt}</td><td class="num">${f3(q.slope,4)}</td><td class="num">${f3(q.nuRG,4)}</td><td class="num">${q.nu===1?'1':'4/3'}</td></tr>`; }).join('')+'</tbody>';
   const mc=rgMC();
@@ -1012,7 +1034,7 @@ function drawRG(){
   const ser=[{color:C.muted,dash:[5,4],width:1.2,pts:[[0.5,0.5],[0.7,0.7]]}], dots=[];
   sweep.filter(s=>s.curve).forEach(s=>ser.push({color:LCOL(s.L),pts:GRID.map((q,i)=>[q,s.curve.R[i]])}));
   rgMC().forEach(m=>dots.push({dots:true,r:5,color:LCOL(m.L),pts:[[m.ps,m.ps]]}));
-  plot($('rgMC'),{x:[0.5,0.7],y:[0,1],series:ser.concat(dots),vlines:[{x:PC,color:C.crit,dash:[4,4],label:'pc'}],xlabel:'p',ylabel:'R_L(p)'});
+  plot($('rgMC'),{x:[0.5,0.7],y:[0,1],series:ser.concat(dots),vlines:[{x:PC,color:C.crit,dash:[4,4],label:'p_c'}],xlabel:'p',ylabel:'R_L(p)'});
   rgTables();
 }
 function drawFlow(r){
