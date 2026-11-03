@@ -11,7 +11,7 @@
 :root{
   --paper:#EEF2F6; --panel:#FFFFFF; --ink:#15243A; --muted:#566779; --rule:#CBD5E0; --grid:#E3E9F0;
   --accent:#1F4FD1; --crit:#B4235A;
-  --l16:#E69F00; --l32:#56B4E9; --l64:#009E73; --l128:#CC79A7; --l256:#0B5FA5;
+  --l16:#E69F00; --l32:#56B4E9; --l64:#009E73; --l128:#CC79A7; --l256:#0B5FA5; --good:#00795A;
   --serif:"Source Serif 4", Georgia, "Times New Roman", serif;
   --sans:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   box-sizing:border-box;
@@ -21,13 +21,13 @@
   :root:not([data-theme="light"]){
     --paper:#0E1924; --panel:#142232; --ink:#E2E9F1; --muted:#93A4B8; --rule:#2B3D52; --grid:#1B2B3D;
     --accent:#7A9DFF; --crit:#FF6F9C;
-    --l16:#F0B43C; --l32:#6CC3F2; --l64:#2FC596; --l128:#E08FC1; --l256:#8FB8FF;
+    --l16:#F0B43C; --l32:#6CC3F2; --l64:#2FC596; --l128:#E08FC1; --l256:#8FB8FF; --good:#2FC596;
   }
 }
 :root[data-theme="dark"]{
   --paper:#0E1924; --panel:#142232; --ink:#E2E9F1; --muted:#93A4B8; --rule:#2B3D52; --grid:#1B2B3D;
   --accent:#7A9DFF; --crit:#FF6F9C;
-  --l16:#F0B43C; --l32:#6CC3F2; --l64:#2FC596; --l128:#E08FC1; --l256:#8FB8FF;
+  --l16:#F0B43C; --l32:#6CC3F2; --l64:#2FC596; --l128:#E08FC1; --l256:#8FB8FF; --good:#2FC596;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -101,7 +101,8 @@ th,td{padding:8px 12px; text-align:left; border-bottom:1px solid var(--grid); ve
 th{font-weight:600; color:var(--muted); font-size:13px}
 td.num{text-align:right; white-space:nowrap}
 tr:last-child td{border-bottom:0}
-.good{color:var(--l64)} .warn{color:var(--crit)}
+/* text color for agreement, darker than the green of the plots so small text keeps 4.5:1 contrast */
+.good{color:var(--good)} .warn{color:var(--crit)}
 .two{display:grid; grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr); gap:20px; margin-top:14px; align-items:start}
 @media (max-width:860px){.two{grid-template-columns:1fr}}
 .two figure canvas{height:340px}
@@ -233,6 +234,7 @@ button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; st
   <h2>Scaling relations</h2>
   <p class="prose">The exponents are not independent. Hyperscaling ties them to the dimension d = 2, and the cluster-number exponent τ links to the fractal dimension. Here each relation is checked with numbers measured independently above; small mismatches come from finite sizes and sampling noise, and they shrink as you add samples.</p>
   <div class="tbl"><table id="relTable" aria-label="Scaling relations"></table></div>
+  <p class="note" style="margin-top:10px">✓ (green): the two sides agree within 3% of the exact value. ✗ (red): they differ by more than 10%.</p>
 </section>
 
 <section>
@@ -725,7 +727,7 @@ function tables(){
   ];
   $('relTable').innerHTML='<thead><tr><th>Relation</th><th>Statement</th><th style="text-align:right">Left side</th><th style="text-align:right">Right side</th><th style="text-align:right">Exact</th><th>Inputs</th></tr></thead><tbody>'+
     rel.map(r=>{ const d=Math.abs(r[2]-r[3]); const cls=!isFinite(d)?'':(d/Math.abs(r[4])<0.03?'good':d/Math.abs(r[4])<0.1?'':'warn');
-      return `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="num ${cls}">${f3(r[2])}</td><td class="num ${cls}">${f3(r[3])}</td><td class="num">${f3(r[4],4)}</td><td style="color:var(--muted)">${r[5]}</td></tr>`; }).join('')+'</tbody>';
+      return `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="num ${cls}">${f3(r[2])}</td><td class="num ${cls}">${f3(r[3])}${cls==='good'?' ✓':cls==='warn'?' ✗':''}</td><td class="num">${f3(r[4],4)}</td><td style="color:var(--muted)">${r[5]}</td></tr>`; }).join('')+'</tbody>';
 }
 function drawSweepCharts(){
   sweepChart('cR','R','R',{y:[-0.03,1.03]});
@@ -804,16 +806,18 @@ function fAnalyze(p, detail){
   for (let i=0;i<N;i++){ if (parent[i]!==i) continue; const s=size[i]; S2+=s*s; T+=s*sq[i]-sx[i]*sx[i]-sy[i]*sy[i]; if (s>smax){smax=s; mr=i;} }
   let xi=0;
   if (mr>=0){ const d=S2-smax*smax, cm=smax*sq[mr]-sx[mr]*sx[mr]-sy[mr]*sy[mr]; xi=d>0?Math.sqrt(Math.max(0,2*(T-cm)/d)):0; }
-  for (let y=0;y<L;y++){ let row=0; for (let x=0;x<L;x++){ row+=(parent[y*L+x]===mr)?1:0; pre[(y+1)*W+x+1]=pre[y*W+x+1]+row; } }
+  // empty sites have parent −1, so with no cluster at all (mr = −1) use a root that no site can have
+  const big= mr>=0 ? mr : -2;
+  for (let y=0;y<L;y++){ let row=0; for (let x=0;x<L;x++){ row+=(parent[y*L+x]===big)?1:0; pre[(y+1)*W+x+1]=pre[y*W+x+1]+row; } }
   const rng=mulberry32(1234), cx=[], cy=[];
-  for (let t=0;t<60000&&cx.length<300;t++){ const x=128+((rng()*256)|0), y=128+((rng()*256)|0); if (parent[y*L+x]===mr){cx.push(x); cy.push(y);} }
+  for (let t=0;t<60000&&cx.length<300;t++){ const x=128+((rng()*256)|0), y=128+((rng()*256)|0); if (parent[y*L+x]===big){cx.push(x); cy.push(y);} }
   const win=[];
   if (cx.length>=20) for (const h of HS){
     let m=0;
     for (let k=0;k<cx.length;k++){ const x0=cx[k]-h, x1=cx[k]+h, y0=cy[k]-h, y1=cy[k]+h; m+=pre[(y1+1)*W+x1+1]-pre[y0*W+x1+1]-pre[(y1+1)*W+x0]+pre[y0*W+x0]; }
     const l=2*h+1; m/=cx.length; win.push([l,m,m/(l*l)]);
   }
-  const res={p, xi, Pinf:smax/N, win};
+  const res={p, xi, Pinf:smax/N, win, empty:mr<0};
   const wf=win.filter(w=>w[0]>=5&&w[0]<=65);
   res.fWin = wf.length>=3 ? linReg(wf.map(w=>Math.log(w[0])), wf.map(w=>Math.log(w[1]))) : null;
   if (!detail) return res;
@@ -843,7 +847,7 @@ function fAnalyze(p, detail){
     }
     return {s,R,pts};
   });
-  res.mask=new Uint8Array(N); for (let i=0;i<N;i++) res.mask[i]=parent[i]===mr?1:0;
+  res.mask=new Uint8Array(N); for (let i=0;i<N;i++) res.mask[i]=parent[i]===big?1:0;
   return res;
 }
 function renderFrac(){
@@ -859,7 +863,7 @@ function renderFrac(){
     ctx.drawImage(F.off,x0,0,w0,w0,0,0,w,w);
     if (id==='fA'){ ctx.strokeStyle=C.accent; ctx.lineWidth=2*dpr; ctx.strokeRect(w-w/z+dpr,dpr,w/z-2*dpr,w/z-2*dpr); }
   });
-  $('fracNote').textContent=`Fractal lattice at p = ${r.p.toFixed(4)}: the largest cluster holds ${(100*r.Pinf).toFixed(1)}% of the sites and ξ ≈ ${r.xi.toFixed(1)} sites.`;
+  $('fracNote').textContent= r.empty ? `Fractal lattice at p = ${r.p.toFixed(4)}: no site is occupied, so there is no cluster.` : `Fractal lattice at p = ${r.p.toFixed(4)}: the largest cluster holds ${(100*r.Pinf).toFixed(1)}% of the sites and ξ ≈ ${r.xi.toFixed(1)} sites.`;
 }
 const FCOL=()=>[C.l16,C.l32,C.l64,C.l128];
 const sw=(c,t,dash)=>`<span class="chip" style="margin-right:12px"><i class="sw" style="background:${c}${dash?';height:2px':''}"></i>${t}</span>`;
@@ -874,7 +878,7 @@ function drawFractal(){
       {color:C.muted,dash:[2,4],width:1.2,noScale:true,pts:[3,300].map(l=>[l,a[1]*Math.pow(l/a[0],2)])});
   }
   plot($('gM'),{x:[2.5,300],logx:true,logy:true,xticks:XT,series:s1,vlines:cur.xi>0?[{x:cur.xi,color:C.crit,dash:[4,4],label:'ξ'}]:[],xlabel:'window side ℓ',ylabel:'M(p;ℓ)'});
-  $('tM').innerHTML = cur.fWin ? `Slope for 5 ≤ ℓ ≤ 65 at p = ${cur.p.toFixed(4)}: <b>${cur.fWin.slope.toFixed(3)}</b>. At p<sub>c</sub> this is D (exact 1.8958); far above p<sub>c</sub> it approaches d = 2.` : 'The largest cluster barely reaches the middle of the lattice at this p. Move p closer to p<sub>c</sub>.';
+  $('tM').innerHTML = cur.empty ? 'No occupied sites at this p, so there is no cluster to measure.' : cur.fWin ? `Slope for 5 ≤ ℓ ≤ 65 at p = ${cur.p.toFixed(4)}: <b>${cur.fWin.slope.toFixed(3)}</b>. At p<sub>c</sub> this is D (exact 1.8958); far above p<sub>c</sub> it approaches d = 2.` : 'The largest cluster barely reaches the middle of the lattice at this p. Move p closer to p<sub>c</sub>.';
   const s2=[];
   if (F.pc) s2.push({color:C.ink,width:1.6,pts:F.pc.win.map(w=>[w[0],w[2]])});
   F.cmp.forEach((r,k)=>{ if (r) s2.push({color:cols[k],pts:r.win.map(w=>[w[0],w[2]])}); });
